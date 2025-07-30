@@ -1,0 +1,30 @@
+# Ignorar carpetas de módulos de Node.js
+node_modules/
+
+# Ignorar archivos de entorno con variables secretas
+.env
+
+# Ignorar archivos de registro de Node.js
+npm-debug.log*
+yarn-debug.log*
+.npm/
+.yarn/
+
+# Ignorar archivos de compilación de Astro
+dist/
+.astro/
+
+# Ignorar directorios y archivos de VS Code
+.vscode/
+
+# Ignorar logs, dumps, etc.
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Para macOS
+.DS_Store
+
+# Para Windows
+Thumbs.db
