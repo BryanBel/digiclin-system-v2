@@ -1,5 +1,4 @@
 import express from 'express';
-import contactsRouter from './src/modules/contacts/contacts.routes.js';
 import { ZodError } from 'zod/v4';
 import { ErrorWithStatus } from './src/utils/errorTypes.js';
 import { DatabaseError } from 'pg';
@@ -15,7 +14,6 @@ app.get('/', (req, res) => {
   res.json({ hola: 'mundo' });
 });
 //se agrega /api/
-app.use('/api/contacts', contactsRouter);
 app.use('/api/users', usersRouter);
 
 app.use((err, req, res, _next) => {
