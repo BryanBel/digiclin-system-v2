@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "dev": "cross-env NODE_ENV=dev node --watch -r dotenv/config index.js"
+    "dev": "concurrently --names \"backend,supabase\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev node --watch -r dotenv/config index.js\" \"supabase start\"",
+    "tables": "node -r dotenv/config src/db/tables.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "concurrently": "^9.1.2",
     "cross-env": "^10.0.0",
     "dotenv": "^17.2.1",
     "eslint": "^9.32.0",
@@ -30,6 +32,7 @@
     "eslint-plugin-prettier": "^5.5.3",
     "globals": "^16.3.0",
     "prettier": "^3.6.2",
+    "supabase": "^2.39.2",
     "supertest": "^7.1.4",
     "vitest": "^3.2.4"
   }
