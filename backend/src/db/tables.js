@@ -1,7 +1,7 @@
 import db from './index.js';
 
 const createUsersTable = async () => {
-  await db.query('DROP TABLE IF EXISTS users');
+  await db.query('DROP TABLE IF EXISTS users CASCADE');
   await db.query(`
     CREATE TABLE users (
       id SERIAL PRIMARY KEY,
@@ -15,7 +15,7 @@ const createUsersTable = async () => {
 };
 
 const createPatientsTable = async () => {
-  await db.query('DROP TABLE IF EXISTS patients');
+  await db.query('DROP TABLE IF EXISTS patients CASCADE');
   await db.query(`
     CREATE TABLE patients (
       id SERIAL PRIMARY KEY,
@@ -28,7 +28,7 @@ const createPatientsTable = async () => {
 };
 
 const createMedicalHistoryTable = async () => {
-  await db.query('DROP TABLE IF EXISTS medical_history');
+  await db.query('DROP TABLE IF EXISTS medical_history CASCADE');
   await db.query(`
     create table MEDICAL_HISTORY (
       id SERIAL PRIMARY KEY,
