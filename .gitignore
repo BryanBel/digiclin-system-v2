@@ -28,3 +28,12 @@ dist/
 
 # Para Windows
 Thumbs.db
+
+# Ignorar archivos específicos de JetBrains
+.env.production
+yarn-error.log*
+pnpm-debug.log*
+.idea/
+
+# Ignorar lockfiles de gestores de paquetes alternativos
+pnpm-lock.yaml
