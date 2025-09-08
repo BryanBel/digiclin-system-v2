@@ -9,7 +9,20 @@
 		<link rel="stylesheet" href="/src/styles/global.css" />
 	</head>
 	<body>
-		<slot />
+			<nav class="bg-blue-700 text-white px-8 py-4 shadow-lg flex items-center justify-between">
+				<div class="flex items-center gap-3">
+					<span class="text-2xl font-bold tracking-wide">DigiClin</span>
+				</div>
+				<div class="flex gap-6 text-lg">
+					<a href="/dashboard" class="hover:text-blue-200 transition">Dashboard</a>
+					<a href="/pacientes" class="hover:text-blue-200 transition">Pacientes</a>
+					<a href="/citas" class="hover:text-blue-200 transition">Citas</a>
+					<a href="/doctores" class="hover:text-blue-200 transition">Doctores</a>
+				</div>
+			</nav>
+			<main>
+				<slot />
+			</main>
 	</body>
 </html>
 
