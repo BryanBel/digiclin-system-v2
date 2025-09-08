@@ -9,8 +9,14 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/react": "^4.3.0",
+    "@heroicons/react": "^2.2.0",
+    "@heroui/react": "^2.8.3",
     "@tailwindcss/vite": "^4.1.11",
     "astro": "^5.13.4",
+    "heroui-cli": "^1.2.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "tailwindcss": "^4.1.11"
   }
 }
