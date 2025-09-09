@@ -4,7 +4,9 @@ import { ErrorWithStatus } from './src/utils/errorTypes.js';
 import { DatabaseError } from 'pg';
 import cors from 'cors';
 import usersRouter from './src/modules/users/users.routes.js';
-import pacientesRouter from './src/modules/pacientes/pacientes.routes.js';
+import patientsRouter from './src/modules/patients/patients.routes.js';
+import doctorsRouter from './src/modules/users/doctors.routes.js';
+import medicalHistoryRouter from './src/modules/medical_history/medical_history.routes.js';
 
 const app = express();
 
@@ -16,7 +18,9 @@ app.get('/', (req, res) => {
 });
 //se agrega /api/
 app.use('/api/users', usersRouter);
-app.use('/api/pacientes', pacientesRouter);
+app.use('/api/patients', patientsRouter);
+app.use('/api/doctors', doctorsRouter);
+app.use('/api/medical-history', medicalHistoryRouter);
 
 app.use((err, req, res, _next) => {
   console.log(err);

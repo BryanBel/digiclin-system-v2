@@ -1,28 +1,9 @@
-
 import { Button, Card } from '@heroui/react';
 import { ChartBarIcon, UserGroupIcon, CalendarDaysIcon, UserIcon } from '@heroicons/react/24/outline';
-
-function Navbar() {
-  return (
-    <nav className="bg-blue-700 text-white px-8 py-4 shadow-lg flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <ChartBarIcon className="h-8 w-8 text-white" />
-        <span className="text-2xl font-bold tracking-wide">DigiClin</span>
-      </div>
-      <div className="flex gap-6 text-lg">
-        <a href="/dashboard" className="hover:text-blue-200 transition">Dashboard</a>
-        <a href="/pacientes" className="hover:text-blue-200 transition">Pacientes</a>
-        <a href="/citas" className="hover:text-blue-200 transition">Citas</a>
-        <a href="/doctores" className="hover:text-blue-200 transition">Doctores</a>
-      </div>
-    </nav>
-  );
-}
 
 export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500">
-      <Navbar />
       <div className="max-w-7xl mx-auto py-10 px-4">
         <h1 className="text-4xl font-extrabold mb-10 flex items-center gap-3 text-blue-900 drop-shadow-lg">
           <ChartBarIcon className="h-12 w-12 text-blue-700" />
