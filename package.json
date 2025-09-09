@@ -1,0 +1,16 @@
+{
+  "name": "digiclin-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "client:dev": "pnpm --filter client dev",
+    "server:dev": "pnpm --filter server dev",
+    "server:tables:create": "pnpm --filter server tables:create",
+    "build": "rm -rf app/backend/dist && pnpm run --filter client build && cp -r app/frontend/dist app/backend/dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.15.1"
+}

@@ -1,12 +1,12 @@
 {
-  "name": "backend",
+  "name": "server",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "vitest",
     "dev": "concurrently --names \"backend,supabase\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev node --watch -r dotenv/config index.js\" \"supabase start\"",
-    "tables": "node -r dotenv/config src/db/tables.js"
+    "tables": "node -r dotenv/config src/db/tables.js"    
   },
   "keywords": [],
   "author": "",
