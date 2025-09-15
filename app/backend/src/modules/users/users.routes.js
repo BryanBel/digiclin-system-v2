@@ -5,7 +5,7 @@ import {
   createDoctor,
   updateDoctor,
   deleteDoctor,
-} from './doctors.repository.js';
+} from './users.repository.js';
 
 const router = Router();
 
