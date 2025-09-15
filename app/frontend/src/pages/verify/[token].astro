@@ -1,0 +1,26 @@
+---
+import Layout from "../../layouts/Layout.astro"
+export const prerender = false
+---
+
+<Layout title="App">
+  <main class="h-[calc(100vh-4rem)] flex flex-col gap-8 p-4 max-w-[90rem] mx-auto md:items-center justify-center">
+    <div class="border-1 p-4 rounded-md">
+      <p id="verify-text" class="text-center">Verificando el correo</p>
+    </div>
+  </main>
+</Layou>
+
+<script>
+  // @ts-nocheck
+  import ky from 'ky';
+  const token = window.location.pathname.split('/verify/')[1];
+  const verifyText = document.querySelector('#verify-text');
+  try {
+    const data = await ky.patch('http://localhost:3000/api/users/verify', {json: {token}}).json();
+    verifyText.innerHTML = data.message;
+  } catch (error) {
+    const errorData = await error.response.json();
+    verifyText.innerHTML = errorData.error;
+  }
+</script>

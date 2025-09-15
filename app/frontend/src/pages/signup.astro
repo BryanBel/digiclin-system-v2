@@ -1,0 +1,184 @@
+---
+import AuthUnprotected from "../features/auth/AuthUnprotected.astro";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+    <main class="h-[calc(100vh-4rem)] flex flex-col gap-8 p-4 max-w-[90rem] mx-auto items-center justify-center">
+      <div class="w-full max-w-md p-4 md:px-8 space-y-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center text-gray-900 dark:text-white">Crea tu cuenta</h1>
+
+        <form id="signup-form" class="space-y-6" novalidate>
+          <!-- Email Field -->
+          <div>
+            <label for="email" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Correo</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="tu.email@ejemplo.com"
+              class="w-full px-4 py-2 text-gray-900 bg-gray-50 border rounded-lg focus:ring-blue-500 focus:outline-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors duration-200"
+            />
+            <p id="email-helper" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Por favor ingresa un direccion de correo valida.
+            </p>
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            <label for="password" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              class="w-full px-4 py-2 text-gray-900 bg-gray-50 border rounded-lg focus:ring-blue-500 focus:outline-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors duration-200"
+            />
+            <p id="password-helper" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Debe tener al menos 6 caracteres e incluir una letra, un número y un carácter especial (!@#$%^&*).
+            </p>
+          </div>
+
+          <!-- Verify Password Field -->
+          <div>
+            <label for="verify-password" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Verificar contraseña</label>
+            <input
+              type="password"
+              id="verify-password"
+              name="verify-password"
+              placeholder="••••••••"
+              class="w-full px-4 py-2 text-gray-900 bg-gray-50 border rounded-lg focus:ring-blue-500 focus:outline-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors duration-200"
+            />
+            <p id="verify-password-helper" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              La contraseña tiene que coincidir.
+            </p>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            id="submit-button"
+            disabled
+            class="w-full px-5 py-3 text-base font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 dark:disabled:bg-gray-600 transition-colors duration-200"
+          >
+            Registrar
+          </button>
+        </form>
+      </div>
+    </main>
+</Layout>
+
+<script>
+  // @ts-nocheck
+  import { BACK_ENDPOINT } from "../config/endpoints";
+import { createNotification } from "../features/notifications/notificiation";
+  import ky from 'ky';
+
+  // DOM Element Selection
+  const form = document.querySelector('#signup-form');
+  const emailInput = document.querySelector('#email');
+  const passwordInput = document.querySelector('#password');
+  const verifyPasswordInput = document.querySelector('#verify-password');
+  const submitButton = document.querySelector('#submit-button');
+
+  // Validation Regular Expressions
+  const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  // At least 1 letter, 1 number, 1 special character, and minimum 6 characters.
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
+
+  // Validation State
+  const validationState = {
+    isEmailValid: false,
+    isPasswordValid: false,
+    doPasswordsMatch: false,
+  };
+
+  // Helper Function to Update Input Visuals
+  function updateInputValidationUI(inputElement, isValid) {
+    if (isValid) {
+      // Use Tailwind classes for valid state: green border
+      inputElement.classList.remove('border-red-500', 'dark:border-red-500');
+      inputElement.classList.add('border-green-500', 'dark:border-green-500');
+    } else {
+      // Use Tailwind classes for invalid state: red border
+      inputElement.classList.remove('border-green-500', 'dark:border-green-500');
+      inputElement.classList.add('border-red-500', 'dark:border-red-500');
+    }
+    // Reset border color if the input is empty
+    if (inputElement.value === '') {
+      inputElement.classList.remove('border-red-500', 'dark:border-red-500', 'border-green-500', 'dark:border-green-500');
+    }
+  }
+
+  // Master Validation Function
+  function validateForm() {
+    const { isEmailValid, isPasswordValid, doPasswordsMatch } = validationState;
+    // Enable the button only if all validation checks pass
+    submitButton.disabled = !isEmailValid || !isPasswordValid || !doPasswordsMatch;
+  }
+
+  // Event Listeners for Real-time Validation
+
+  // 1. Email Validation
+  emailInput.addEventListener('input', () => {
+    const isValid = emailRegex.test(emailInput.value);
+    validationState.isEmailValid = isValid;
+    updateInputValidationUI(emailInput, isValid);
+    validateForm();
+  });
+
+  // 2. Password Strength Validation
+  passwordInput.addEventListener('input', () => {
+    const isValid = passwordRegex.test(passwordInput.value);
+    validationState.isPasswordValid = isValid;
+    updateInputValidationUI(passwordInput, isValid);
+
+    // Also, re-check the verify password field whenever the main password changes
+    const passwordsMatch = passwordInput.value === verifyPasswordInput.value && verifyPasswordInput.value.length > 0;
+    validationState.doPasswordsMatch = passwordsMatch;
+    updateInputValidationUI(verifyPasswordInput, passwordsMatch);
+
+    validateForm();
+  });
+
+  // 3. Verify Password Match Validation
+  verifyPasswordInput.addEventListener('input', () => {
+    const isValid = passwordInput.value === verifyPasswordInput.value && verifyPasswordInput.value.length > 0;
+    validationState.doPasswordsMatch = isValid;
+    updateInputValidationUI(verifyPasswordInput, isValid);
+    validateForm();
+  });
+
+  // Form Submission
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const { isEmailValid, isPasswordValid, doPasswordsMatch } = validationState;
+    if (!isEmailValid || !isPasswordValid || !doPasswordsMatch) return;
+
+
+    try {
+      await ky.post(`${BACK_ENDPOINT}/api/users`, {json: { email: emailInput.value, password: passwordInput.value}});
+      // Reinciar todos los estados del formulario
+      for (const key in validationState) {
+        validationState[key] = false;
+      }
+      form.reset();
+      [emailInput, passwordInput, verifyPasswordInput].forEach(input => {
+        updateInputValidationUI(input);
+      });
+      validateForm();
+      createNotification({ 
+        title: 'Usuario creado!', 
+        description: 'Se ha enviado un correo de verificacion a su bandeja de correo', 
+        type: 'success'
+      });
+    } catch (error) {
+      const errorData = await error?.response?.json();
+      createNotification({ 
+        title: 'Ups! Hubo un error', 
+        description: errorData?.error ?? 'Sin mensaje', 
+        type: 'error'
+      });
+    }  
+  });
+</script>

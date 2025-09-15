@@ -1,0 +1,20 @@
+---
+const { name, phone, id } = Astro.props;
+import { Icon } from 'astro-icon/components';
+---
+
+<li id={id} class="flex gap-4 justify-between items-center" data-status="inputs-deshabilitados">
+  <div class="flex flex-wrap md:flex-nowrap gap-2 flex-grow">
+    <input class="w-full bg-gray-100 rounded-md p-2 outline-none" type="text" value={name} readonly>
+    <input class="w-full bg-gray-100 rounded-md p-2 outline-none" type="text" value={phone} readonly>
+  </div>
+  <div class="flex gap-2 items-center">
+    <button class="edit-btn w-8 h-8 flex justify-center items-center text-gray-600 hover:text-indigo-700">
+      <Icon name="mdi:account-box-edit-outline" class="w-6 h-6" is:inline/>
+      <Icon name="mdi:pencil" class="w-6 h-6 hidden" is:inline/>
+    </button>
+    <button class="delete-btn w-8 h-8 flex justify-center items-center text-gray-600 hover:text-red-600">
+      <Icon name="mdi:alpha-x" class="w-6 h-6" is:inline/>
+    </button>
+  </div>
+</li>

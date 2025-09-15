@@ -1,11 +1,19 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import AuthProtected from "../features/auth/AuthProtected.astro";
+import AuthUnprotected from "../features/auth/AuthUnprotected.astro";
+import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout>
-	<Welcome />
+<!-- TODO: Tipo de letra inter -->
+<!-- TODO: Cambiar la descripcion -->
+<Layout title="Home">
+  <AuthUnprotected>
+    <main class="min-h-screen flex flex-col justify-center gap-4 px-4 max-w-7xl mx-auto md:items-center md:w-[70%] lg:flex-row">
+      <h1 class="text-indigo-700 text-5xl md:text-6xl lg:text-7xl">Contactos</h1>
+      <div class="flex flex-col gap-4">
+        <p class="text-justify md:text-base lg:text-xl">Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur nam, nemo repudiandae vel libero pariatur quae perferendis officia molestias numquam repellendus sunt maiores dolorum voluptatem. Animi quasi quo alias deleniti!</p>
+        <a class="bg-indigo-700 py-4 px-8 text-white no-underline text-center uppercase font-medium text-xl rounded-md hover:bg-indigo-800 transition-all duration-200 ease-in" href="/contacts">Comienza Ya!</a>
+      </div>
+    </main>
+  </AuthUnprotected>
 </Layout>
