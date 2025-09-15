@@ -4,9 +4,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "start": "pnpm --filter server start",
+    "client:dev": "pnpm --filter client dev",
+    "server:dev": "pnpm --filter server dev",
+    "server:prod": "pnpm --filter server prod",
     "test": "vitest",
     "dev": "concurrently --names \"backend\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev node --watch -r dotenv/config index.js\"",
-    "tables": "node -r dotenv/config src/db/tables.js"
+    "prod": "concurrently --names \"backend\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=prod node --watch -r dotenv/config index.js\"",
+    "tables:create:prod": "NODE_ENV=prod node -r dotenv/config src/db/tables.js",
+    "tables:create:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/tables.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +20,7 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "clsx": "^2.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.1.0",
