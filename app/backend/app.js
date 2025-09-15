@@ -8,6 +8,7 @@ import patientsRouter from './src/modules/patients/patients.routes.js';
 import medicalHistoryRouter from './src/modules/medical_history/medical_history.routes.js';
 import path from 'path';
 import { handler as ssrHandler } from './dist/server/entry.mjs';
+
 const app = express();
 
 app.use(cors());
