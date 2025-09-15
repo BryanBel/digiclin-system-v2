@@ -1,0 +1,102 @@
+<form id="main-form" class="p-2 rounded-md flex flex-col gap-4 border border-gray-300 md:w-[70%] lg:w-[50%]">
+  <div class="flex flex-col gap-2">
+    <label for="name-input" class="font-medium">Nombre</label>
+    <div class="relative flex items-center w-full">
+      <input type="text" name="name-input" id="name-input" class="w-full rounded-md p-2 text-base ring-1 ring-gray-300 focus:outline-none focus:ring-indigo-500" placeholder="Gabriel Garcia">
+      <span class="absolute right-2.5 hidden text-xl"></span>
+    </div>
+    <p class="text-xs font-light text-red-500 hidden">
+      Tiene que tener nombre y apellido. <br>
+      Ambos comienzan con mayusculas.
+    </p>
+  </div>
+  <div class="flex flex-col gap-2">
+    <label for="phone-input" class="font-medium">Numero</label>
+    <div class="relative flex items-center w-full">
+      <input type="text" name="phone-input" id="phone-input" class="w-full rounded-md p-2 text-base ring-1 ring-gray-300 focus:outline-none focus:ring-indigo-500" placeholder="04122110509">
+      <span class="absolute right-2.5 hidden text-xl"></span>
+    </div>
+    <p class="text-xs font-light text-red-500 hidden">
+      Tiene que ser un numero venezolano valido.
+    </p>
+  </div>
+  <button id="main-form-btn" disabled class="bg-indigo-700 py-2 px-4 text-white text-center uppercase font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed">Crear</button>
+</form>
+
+<script>
+// @ts-nocheck
+// Modulos
+import ContactsModule from "./contacts.module";
+
+// Selectores
+const inputName = document.querySelector('#name-input');
+const inputNumber = document.querySelector('#phone-input');
+const form = document.querySelector('#main-form');
+const formBtn = document.querySelector('#main-form-btn');
+const contactsList = document.querySelector('#contacts-list');
+
+// Regex
+const NAME_REGEX = /^[A-Z][a-z]*[ ][A-Z][a-z]{3,}[ ]{0,1}$/;
+const PHONE_REGEX = /^[0](412|424|414|426|416|212)[0-9]{7}$/;
+
+// Validaciones del formulario
+let nameValidation = false;
+let phoneValidation = false;
+
+// Funciones
+const renderValidation = (input, validation) => {
+  const helperText = input.parentElement.nextElementSibling;
+  const iconContainer = input.nextElementSibling;
+  
+  if (input.value === '') {
+    input.classList.remove('input-invalid', 'input-valid');
+    helperText?.classList.remove('show-helper-text');
+    iconContainer.innerHTML = '';
+    iconContainer.classList.remove('show');
+  } else if (validation) {
+    input.classList.add('input-valid');
+    input.classList.remove('input-invalid');
+    helperText?.classList.remove('show-helper-text');
+    iconContainer.innerHTML = '<span class="iconify" data-icon="mdi:check-circle" style="color: green;"></span>';
+    iconContainer.classList.add('show');
+  } else {
+    input.classList.add('input-invalid');
+    input.classList.remove('input-valid');
+    helperText?.classList.add('show-helper-text');
+    iconContainer.innerHTML = '<span class="iconify" data-icon="mdi:close-circle" style="color: red;"></span>';
+    iconContainer.classList.add('show');
+  }
+}
+
+const renderButtonState = () => {
+  if (nameValidation && phoneValidation) {
+    formBtn.disabled = false;
+  } else {
+    formBtn.disabled = true;
+  }
+}
+
+// Eventos
+inputName.addEventListener('input', e => {
+  nameValidation = NAME_REGEX.test(inputName.value);
+  renderValidation(inputName, nameValidation);
+  renderButtonState();
+});
+
+inputNumber.addEventListener('input', e => {
+  phoneValidation = PHONE_REGEX.test(inputNumber.value);
+  renderValidation(inputNumber, phoneValidation);
+  renderButtonState();
+});
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  // 1. Validar
+  if (!nameValidation || !phoneValidation) return;
+  // 2. Agregar el contacto
+  await ContactsModule.addContact({
+    name: inputName.value,
+    phone: inputNumber.value
+  });
+});
+</script>

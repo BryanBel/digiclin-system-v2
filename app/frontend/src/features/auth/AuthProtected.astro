@@ -1,0 +1,27 @@
+<div id="auth-div">
+  <p id="loading-text">Cargando...</p>
+  <div id="auth-content" class="hidden">
+    <slot>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  import AuthModule from "./auth.module";
+  const loadingText = document.querySelector('#loading-text');
+  const authContent = document.querySelector('#auth-content');
+  const authDiv = document.querySelector('#auth-div');
+  const user = await AuthModule.getLoggedUser();
+  
+  try {
+    await AuthModule.getLoggedUser();
+    authContent.classList.remove('hidden');
+  } catch (error) {
+    if (error.response.status === 401 || error.response.status === 403) {
+      location.replace('/login');
+    }
+  } finally {
+    loadingText.remove();
+  }
+  
+</script>

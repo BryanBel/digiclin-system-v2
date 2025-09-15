@@ -1,0 +1,57 @@
+---
+import logoPng from '../../assets/logo.png'
+---
+
+<!-- TODO: Menu movil -->
+<nav class="bg-indigo-700 text-white fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-7xl mx-auto h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2 h-full">
+        <img class="w-8 h-8" src={logoPng.src} alt="logo">
+        <h2 class="font-medium text-xl">Contactos</h2>
+      </div>
+      <div id="nav-links" class="flex items-center gap-4">
+        <div id="nav-user-container">
+          <p id="nav-user-name"></p>
+        </div>
+        <button id="logout-btn" class="md:hidden flex items-center justify-center p-1 rounded-md bg-white text-indigo-700">
+          <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <!-- {links.map(link => <a class="hidden md:block text-white no-underline hover:underline" href={link.path}>{link.name}</a>)} -->
+      </div>
+    </div>
+</nav>
+
+<script>
+  // @ts-nocheck
+  import AuthModule, {user} from '../auth/auth.module';
+  import { getLinks } from "./navigation.utils";
+  const navLinksDiv = document.querySelector('#nav-links'); 
+  const navUserName = document.querySelector('#nav-user-name');
+  const logoutBtn = document.querySelector('#logout-btn');
+  const pathname = location.pathname;
+  const links = getLinks(pathname);
+
+  links.forEach(link => {
+    if (link.type === 'button') {
+      const btn = document.createElement('button');
+      btn.addEventListener('click', link.handler);
+      btn.innerHTML = link.text;
+      navLinksDiv.append(btn)
+    } else {
+      const a = document.createElement('a');
+      a.href = link.path;
+      a.setAttribute('class', 'hidden md:block text-white no-underline hover:underline');
+      a.innerHTML = link.text;
+      navLinksDiv.append(a);
+    }
+  });
+
+  user.subscribe(user => {
+    if (!user) return;
+    const userName = user.email.split('@')[0];
+    navUserName.innerHTML = `Bienvenido ${userName}`
+  });
+  
+</script>
