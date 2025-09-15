@@ -1,33 +1,44 @@
 import db from '../../db/index.js';
+import { ErrorWithStatus } from '../../utils/errorTypes.js';
 
-export const getAllDoctors = async () => {
-  const result = await db.query('SELECT * FROM users WHERE role = $1', ['doctor']);
-  return result.rows;
-};
-
-export const getDoctorById = async (id) => {
-  const result = await db.query('SELECT * FROM users WHERE id = $1 AND role = $2', [id, 'doctor']);
-  return result.rows[0];
-};
-
-export const createDoctor = async (doctor) => {
-  const { email, passwordHash, role } = doctor;
-  const result = await db.query(
-    'INSERT INTO users (email, passwordHash, role) VALUES ($1, $2, $3) RETURNING *',
-    [email, passwordHash, role || 'doctor'],
+const addOne = async (payload) => {
+  const response = await db.query(
+    `
+    INSERT INTO users (email, passwordHash)
+    VALUES ($1, $2) RETURNING *
+  `,
+    [payload.email, payload.passwordHash],
   );
-  return result.rows[0];
+  return response.rows[0];
 };
 
-export const updateDoctor = async (id, doctor) => {
-  const { email, passwordHash, role } = doctor;
-  const result = await db.query(
-    'UPDATE users SET email = $1, passwordHash = $2, role = $3 WHERE id = $4 RETURNING *',
-    [email, passwordHash, role || 'doctor', id],
+const verifyOne = async (payload) => {
+  const response = await db.query(
+    `
+    UPDATE users
+    SET verify_email = true
+    WHERE id = $1
+    RETURNING *
+  `,
+    [payload.id],
   );
-  return result.rows[0];
+  if (response.rowCount === 0) {
+    throw new ErrorWithStatus(400, 'Token malformado');
+  }
+  return response.rows[0];
 };
 
-export const deleteDoctor = async (id) => {
-  await db.query('DELETE FROM users WHERE id = $1 AND role = $2', [id, 'doctor']);
+const findByEmail = async (payload) => {
+  const response = await db.query(
+    `
+    SELECT * FROM users
+    WHERE email = $1
+  `,
+    [payload.email],
+  );
+  return response.rows[0];
 };
+
+const usersRepository = { addOne, verifyOne, findByEmail };
+
+export default usersRepository;

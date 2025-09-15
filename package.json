@@ -1,22 +1,25 @@
 {
-  "name": "digiclin-app",
+  "name": "digiclin-system",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "concurrently --names \"client,server\" -c \"bgGreen.bold,bgBlue.bold\" \"pnpm --filter client dev\" \"pnpm --filter server dev\"",
+    "start": "pnpm --filter server start",
     "client:dev": "pnpm --filter client dev",
     "server:dev": "pnpm --filter server dev",
-    "server:tables:create": "pnpm --filter server tables:create",
-    "build": "rm -rf app/backend/dist && pnpm run --filter client build && cp -r app/frontend/dist app/backend/dist"
+    "server:prod": "pnpm --filter server prod",
+    "build:client": "rm -rf app/backend/dist && pnpm run --filter client build && cp -r app/frontend/dist app/backend/dist"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.16.1",
+  "packageManager": "pnpm@10.15.1",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
   "dependencies": {
-    "@astrojs/node": "^9.4.3",
-    "@tailwindcss/vite": "^4.1.13",
     "ky": "^1.10.0",
-    "tailwindcss": "^4.1.13"
+    "nanostores": "^1.0.1"
   }
 }

@@ -1,68 +1,35 @@
-import { Router } from 'express';
-import {
-  getAllDoctors,
-  getDoctorById,
-  createDoctor,
-  updateDoctor,
-  deleteDoctor,
-} from './users.repository.js';
+import express from 'express';
+import { createUserRouteSchema, verifyUserRouteSchema } from './users.routes.schemas.js';
+import bcrypt from 'bcrypt';
+import usersRepository from './users.repository.js';
+import jwt from 'jsonwebtoken';
+import nodemailerService from '../../services/nodemailer.js';
+const usersRouter = express.Router();
 
-const router = Router();
+usersRouter.post('/', async (req, res) => {
+  const body = createUserRouteSchema.body.parse(req.body);
+  const passwordHash = await bcrypt.hash(body.password, 10);
+  const newUser = await usersRepository.addOne({ email: body.email, passwordHash });
+  const token = jwt.sign(
+    { id: newUser.id, email: newUser.email },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: '10m' },
+  );
+  await nodemailerService.sendMail({
+    from: process.env.EMAIL_USER,
+    to: body.email,
+    subject: 'Verifica tu correo',
+    html: `<a href="http://localhost:4321/verify/${token}">Verifica tu correo</a>`,
+  });
 
-// Obtener todos los doctores
-router.get('/', async (req, res) => {
-  try {
-    const doctors = await getAllDoctors();
-    res.json(doctors);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener doctores' });
-  }
+  res.sendStatus(200);
 });
 
-// Obtener un doctor por ID
-router.get('/:id', async (req, res) => {
-  try {
-    const doctor = await getDoctorById(req.params.id);
-    if (!doctor) {
-      return res.status(404).json({ error: 'Doctor no encontrado' });
-    }
-    res.json(doctor);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener doctor' });
-  }
+usersRouter.patch('/verify', async (req, res) => {
+  const body = verifyUserRouteSchema.body.parse(req.body);
+  const decodedToken = jwt.verify(body.token, process.env.REFRESH_TOKEN_SECRET);
+  await usersRepository.verifyOne({ id: decodedToken.id });
+  res.status(200).json({ message: 'Su correo ha sido verificado exitosamente' });
 });
 
-// Crear un doctor
-router.post('/', async (req, res) => {
-  try {
-    const nuevoDoctor = await createDoctor(req.body);
-    res.status(201).json(nuevoDoctor);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al crear doctor' });
-  }
-});
-
-// Actualizar un doctor
-router.put('/:id', async (req, res) => {
-  try {
-    const doctorActualizado = await updateDoctor(req.params.id, req.body);
-    if (!doctorActualizado) {
-      return res.status(404).json({ error: 'Doctor no encontrado' });
-    }
-    res.json(doctorActualizado);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar doctor' });
-  }
-});
-
-// Eliminar un doctor
-router.delete('/:id', async (req, res) => {
-  try {
-    await deleteDoctor(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar doctor' });
-  }
-});
-
-export default router;
+export default usersRouter;
