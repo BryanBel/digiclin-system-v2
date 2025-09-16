@@ -5,6 +5,7 @@ import {
   createMedicalHistory,
   updateMedicalHistory,
   deleteMedicalHistory,
+  getMedicalHistoryByPatientId,
 } from './medical_history.repository.js';
 
 const router = Router();
@@ -62,6 +63,15 @@ router.delete('/:id', async (req, res) => {
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar registro' });
+  }
+});
+
+router.get('/patient/:patientId', async (req, res) => {
+  try {
+    const history = await getMedicalHistoryByPatientId(req.params.patientId);
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener historial médico por paciente' });
   }
 });
 

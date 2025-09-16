@@ -31,3 +31,8 @@ export const updateMedicalHistory = async (id, history) => {
 export const deleteMedicalHistory = async (id) => {
   await db.query('DELETE FROM medical_history WHERE id = $1', [id]);
 };
+
+export const getMedicalHistoryByPatientId = async (patientId) => {
+  const result = await db.query('SELECT * FROM medical_history WHERE patient_id = $1', [patientId]);
+  return result.rows;
+};
