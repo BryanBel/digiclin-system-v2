@@ -3,6 +3,7 @@ import { createUserRouteSchema, verifyUserRouteSchema } from './users.routes.sch
 import bcrypt from 'bcrypt';
 import usersRepository from './users.repository.js';
 import jwt from 'jsonwebtoken';
+import endpoint from '../../config/endpoint.js';
 import nodemailerService from '../../services/nodemailer.js';
 const usersRouter = express.Router();
 
@@ -19,7 +20,7 @@ usersRouter.post('/', async (req, res) => {
     from: process.env.EMAIL_USER,
     to: body.email,
     subject: 'Verifica tu correo',
-    html: `<a href="http://localhost:4321/verify/${token}">Verifica tu correo</a>`,
+    html: `<a href="http://${endpoint}/verify/${token}">Verifica tu correo</a>`,
   });
 
   res.sendStatus(200);
