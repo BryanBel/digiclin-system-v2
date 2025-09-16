@@ -13,6 +13,7 @@
     "@astrojs/react": "^4.3.1",
     "@heroicons/react": "^2.2.0",
     "@heroui/react": "^2.8.4",
+    "@heroui/theme": "^2.4.22",
     "astro": "^5.13.7",
     "astro-icon": "^1.1.5",
     "heroui-cli": "^1.2.3",
@@ -21,6 +22,6 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.13",
-    "tailwindcss": "4.1.13"
+    "tailwindcss": "^4.1.13"
   }
 }
