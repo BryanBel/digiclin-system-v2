@@ -1,13 +1,7 @@
 packages:
-  - app/*
+  - app/**/*
 
 onlyBuiltDependencies:
-  - '@heroui/shared-utils'
-  - '@tailwindcss/oxide'
   - bcrypt
   - esbuild
-  - sharp
   - supabase
-  - tree-sitter
-  - tree-sitter-javascript
-  - tree-sitter-typescript
