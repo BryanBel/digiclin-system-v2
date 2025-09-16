@@ -2,6 +2,9 @@ packages:
   - app/**/*
 
 onlyBuiltDependencies:
+  - '@heroui/shared-utils'
+  - '@tailwindcss/oxide'
   - bcrypt
   - esbuild
+  - sharp
   - supabase

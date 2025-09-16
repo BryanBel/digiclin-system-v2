@@ -1,0 +1,28 @@
+
+---
+// A form to create a new patient.
+---
+<form id="create-patient-form" class="flex flex-col gap-4 p-4 border border-gray-300 rounded-md mb-8">
+  <h3 class="text-lg font-bold">Add New Patient</h3>
+  <div>
+    <label for="patient-name" class="block mb-2 text-sm font-medium text-gray-900">Patient Name</label>
+    <input type="text" id="patient-name" name="name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="John Doe" required />
+  </div>
+  <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Add Patient</button>
+</form>
+
+<script>
+  import PatientsModule from './patients.module.js';
+
+  const form = document.getElementById('create-patient-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const name = formData.get('name');
+    
+    if (typeof name === 'string' && name.trim() !== '') {
+      await PatientsModule.addPatient({ name });
+      (form as HTMLFormElement).reset();
+    }
+  });
+</script>

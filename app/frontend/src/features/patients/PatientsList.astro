@@ -1,0 +1,55 @@
+
+---
+import PatientItem from './PatientItem.astro'; // We will create this component next
+---
+
+<ul id="patients-list" class="m-0 p-2 list-none overflow-auto flex flex-col gap-8 rounded-md border border-gray-300 h-full">
+  <template id="patient-item-template">
+    <PatientItem 
+      id="0"
+      name="Example Patient"
+    />
+  </template>
+</ul>
+
+<script>
+  import PatientsModule, { patients } from './patients.module.js';
+
+  const patientsList = document.querySelector('#patients-list');
+  const patientItemTemplate = document.querySelector('#patient-item-template');
+
+  // Fetch initial data
+  await PatientsModule.getPatients();
+
+  // Subscribe to changes in the patients store
+  patients.subscribe(allPatients => {
+    if (!patientsList || !patientItemTemplate) return;
+    
+    // Clear the list
+    patientsList.innerHTML = '';
+
+    if (allPatients.length === 0) {
+        const noPatientsLi = document.createElement('li');
+        noPatientsLi.textContent = 'No patients found.';
+        noPatientsLi.className = 'text-gray-500 p-4';
+        patientsList.appendChild(noPatientsLi);
+        return;
+    }
+
+    // Render each patient
+    for (const patient of allPatients) {
+      const patientItemFragment = patientItemTemplate.content.cloneNode(true);
+      const patientItem = patientItemFragment.children[0];
+      
+      patientItem.id = `patient-${patient.id}`;
+      
+      // Find and update elements within the cloned template
+      const nameEl = patientItem.querySelector('.patient-name');
+      if (nameEl) nameEl.textContent = patient.name;
+      
+      // You would also set up edit/delete buttons here
+      
+      patientsList.appendChild(patientItem);
+    }
+  });
+</script>
