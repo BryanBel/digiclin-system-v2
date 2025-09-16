@@ -2,7 +2,7 @@
 node_modules/
 
 # Ignorar archivos de entorno con variables secretas
-.env
+# .env
 
 apps/frontend/dist
 
