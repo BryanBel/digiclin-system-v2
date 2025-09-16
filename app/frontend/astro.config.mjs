@@ -1,8 +1,8 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node'; // Import the node adapter
-import react from '@astrojs/react'; 
-import tailwindcss from '@astrojs/tailwind';
-import icon from 'astro-icon'; 
+import react from '@astrojs/react';
+import icon from 'astro-icon';
+import tailwind from '@tailwindcss/vite';
 
 export default defineConfig({
   // Add the node adapter for SSR
@@ -11,9 +11,9 @@ export default defineConfig({
   }),
   integrations: [
     react(),
-    icon(),
+    icon()
   ],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwind()],
   },
 });
