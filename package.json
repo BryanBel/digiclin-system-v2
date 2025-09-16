@@ -16,12 +16,11 @@
   "license": "ISC",
   "packageManager": "pnpm@10.15.1",
   "devDependencies": {
+    "astro": "^5.13.7",
     "concurrently": "^9.2.1"
   },
   "dependencies": {
-    "astro": "^5.13.7",
     "ky": "^1.10.0",
-    "nanostores": "^1.0.1",
-    "tailwindcss": "3.0.24"
+    "nanostores": "^1.0.1"
   }
 }
