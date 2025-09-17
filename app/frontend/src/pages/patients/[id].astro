@@ -1,20 +1,17 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import MedicalHistory from "../../features/medical_history/medicalHistory.astro";
-// this is a dynamic page to get the id from the url
+export const prerender = false; // Activa SSR para esta ruta dinámica, le decimos a Astro que no pre-renderice esta página.
 const { id } = Astro.params;
 ---
 
 <Layout>
-    <main class="p-4 md:p-8">
-        <div class="flex justify-between items-center mb-6">
+    <main class="p-4 md:p-8 max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-blue-700">Detalles del Paciente</h1>
             <a href="/patients" class="text-blue-600 hover:underline">Volver a la lista de pacientes</a>
-
-            <p class="mb-8">Mostrando el historial médico del Paciente con el ID: {id}</p>
-
-            {id && <MedicalHistory patientId={id} />}
         </div>
-        </div>
+        <p class="mb-8 text-gray-600 dark:text-gray-400">Mostrando el historial médico del Paciente con el ID: <strong>{id}</strong></p>
+        {id && <MedicalHistory patientId={id} />}
     </main>
 </Layout>

@@ -14,7 +14,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "pnpm@10.16.1",
   "devDependencies": {
     "astro": "^5.13.7",
     "concurrently": "^9.2.1"
