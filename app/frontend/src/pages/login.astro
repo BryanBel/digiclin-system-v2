@@ -44,32 +44,47 @@ import Layout from "../layouts/Layout.astro";
 </Layout>
 
 <script>
-  // @ts-nocheck
-  import { BACK_ENDPOINT } from "../config/endpoints";
-import AuthModule from "../features/auth/auth.module";
-  import { createNotification } from "../features/notifications/notificiation";
-  import ky from 'ky';
+  import { BACK_ENDPOINT } from "../config/endpoints.js";
+  import AuthModule from "../features/auth/auth.module";
+  import { createNotification } from "../features/notifications/notification";
 
   // DOM Element Selection
-  const form = document.querySelector('#signup-form');
-  const emailInput = document.querySelector('#email');
-  const passwordInput = document.querySelector('#password');
+  const form = document.querySelector<HTMLFormElement>('#signup-form');
+  const submitButton = document.querySelector<HTMLButtonElement>('#submit-button');
 
-  // Form Submission
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  if (form && submitButton) {
+    const originalButtonText = submitButton.textContent;
 
-    try {
-      await AuthModule.login({email: emailInput.value, password: passwordInput.value});
-      location.assign('/contacts');
-    } catch (error) {
-      console.log(error);
-      const errorData = await error?.response?.json();
-      createNotification({ 
-        title: 'Ups! Hubo un error', 
-        description: errorData?.error ?? 'Sin mensaje', 
-        type: 'error'
-      });
-    }  
-  });
+    form.addEventListener('submit', async (event: SubmitEvent) => {
+      event.preventDefault();
+
+      // Disable button and show loading state for better UX
+      submitButton.disabled = true;
+      submitButton.textContent = 'Iniciando...';
+
+      const formData = new FormData(form);
+      const email = formData.get('email') as string;
+      const password = formData.get('password') as string;
+
+      try {
+        await AuthModule.login({ email, password });
+        // Redirect on success. Changed to /patients based on other files.
+        window.location.assign('/patients');
+      } catch (error: any) {
+        console.error('Login failed:', error);
+        // Attempt to parse a more specific error message from the response
+        const errorData = await error?.response?.json().catch(() => null);
+        createNotification({ 
+          title: 'Ups! Hubo un error', 
+          description: errorData?.error ?? 'Credenciales incorrectas o problema del servidor.', 
+          type: 'error'
+        });
+      } finally {
+        // Always re-enable the button and restore its original text
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
+    });
+  }
+</script>
 </script>
