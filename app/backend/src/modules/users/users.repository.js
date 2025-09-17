@@ -1,4 +1,4 @@
-import db from '../../db/index.js';
+import db from '../../db/pool.js';
 import { ErrorWithStatus } from '../../utils/errorTypes.js';
 
 const addOne = async (payload) => {

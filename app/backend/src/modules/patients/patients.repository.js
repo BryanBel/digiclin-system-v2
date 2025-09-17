@@ -1,4 +1,4 @@
-import db from '../../db/index.js';
+import db from '../../db/pool.js';
 
 export const getAllPatients = async () => {
   const result = await db.query('SELECT * FROM patients');

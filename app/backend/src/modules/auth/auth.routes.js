@@ -1,11 +1,56 @@
 import express from 'express';
-import { loginUserRouteSchema } from './auth.routes.schemas.js';
+import {
+  loginUserRouteSchema,
+  registerUserRouteSchema,
+  verifyEmailRouteSchema,
+} from './auth.routes.schemas.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import usersRepository from '../users/users.repository.js';
 import { ErrorWithStatus } from '../../utils/errorTypes.js';
 import { authenticateUser } from './auth.middlewares.js';
+import nodemailerService from '../../services/nodemailer.js';
 const authRouter = express.Router();
+
+authRouter.post('/register', async (req, res) => {
+  const { email, password } = registerUserRouteSchema.body.parse(req.body);
+
+  const userExists = await usersRepository.findByEmail({ email });
+  if (userExists) throw new ErrorWithStatus(400, 'User already exists');
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const newUser = await usersRepository.addOne({ email, passwordHash });
+
+  const verificationToken = jwt.sign(
+    { id: newUser.id, email: newUser.email },
+    process.env.EMAIL_VERIFICATION_SECRET,
+    { expiresIn: '1h' },
+  );
+
+  const verificationUrl = `${process.env.BACKEND_URL}/api/auth/verify-email/${verificationToken}`;
+
+  await nodemailerService.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Verifica tu correo',
+    html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
+  });
+
+  res.status(201).json({ message: 'User registered. Please check your email to verify.' });
+});
+
+authRouter.get('/verify-email/:token', async (req, res) => {
+  const { token } = verifyEmailRouteSchema.params.parse(req.params);
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4321';
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
+    await usersRepository.verifyOne({ id: decodedToken.id });
+    res.redirect(`${frontendUrl}/email-verified`);
+  } catch (error) {
+    res.redirect(`${frontendUrl}/email-verification-failed`);
+  }
+});
 
 authRouter.post('/login', async (req, res) => {
   const body = loginUserRouteSchema.body.parse(req.body);
@@ -13,21 +58,25 @@ authRouter.post('/login', async (req, res) => {
   if (!user) throw new ErrorWithStatus(400, 'Usuario o contraseña invalidos');
   const isPasswordValid = await bcrypt.compare(body.password, user.passwordhash);
   if (!isPasswordValid) throw new ErrorWithStatus(400, 'Usuario o contraseña invalidos');
-  if (!user.verify_email) throw new ErrorWithStatus(400, 'Usuario o contraseña invalidos');
+  if (!user.verify_email)
+    throw new ErrorWithStatus(
+      403,
+      'Por favor, verifica tu correo electrónico antes de iniciar sesión.',
+    );
 
   const accessToken = jwt.sign(
     { id: user.id, email: user.email },
-    process.env.REFRESH_TOKEN_SECRET,
+    process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: '1d' },
   );
 
   res.cookie('access_token', accessToken, {
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'prod',
     httpOnly: true,
   });
 
-  res.status(200).json({ id: user.id, email: user.email, accessToken });
+  res.status(200).json({ id: user.id, email: user.email });
 });
 
 authRouter.get('/user', authenticateUser, async (req, res) => {
