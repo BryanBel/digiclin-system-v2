@@ -5,11 +5,21 @@ import { atom } from "nanostores";
 export const user = atom(null);
 
 const login = async ({email, password}) => {
-  const data = await ky.post(`${BACK_ENDPOINT}/api/auth/login`, {
+  const response = await ky.post(`${BACK_ENDPOINT}/api/auth/login`, {
     json: {email, password},
     credentials: 'include'
   });
-  user.set(data);
+  const userData = await response.json();
+  user.set(userData);
+}
+
+const register = async ({email, password}) => {
+  const response = await ky.post(`${BACK_ENDPOINT}/api/auth/register`, {
+    json: {email, password},
+    credentials: 'include'
+  });
+  // Cuando se registra el backend envia un mensaje
+  return await response.json();
 }
 
 const getLoggedUser = async () => {
@@ -22,5 +32,5 @@ const logoutUser = async () => {
   await ky.get(`${BACK_ENDPOINT}/api/auth/logout`, {credentials: 'include'});
 }
 
-const AuthModule = { login, getLoggedUser, logoutUser };
+const AuthModule = { login, register, getLoggedUser, logoutUser };
 export default AuthModule;

@@ -1,17 +1,33 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import MedicalHistory from "../../features/medical_history/medicalHistory.astro";
+import PatientsModule from "../../features/patients/PatientsModule.js";
+
 export const prerender = false; // Activa SSR para esta ruta dinámica, le decimos a Astro que no pre-renderice esta página.
 const { id } = Astro.params;
+
+let patient = null;
+if (id) {
+    try {
+        // Assuming your module has a method to fetch a single patient
+        patient = await PatientsModule.getPatientById(id);
+    } catch (error) {
+        console.error(`Failed to fetch patient with id ${id}:`, error);
+        // In a real app, you might redirect to a 404 page or show a dedicated error component
+    }
+}
 ---
 
 <Layout>
     <main class="p-4 md:p-8 max-w-7xl mx-auto">
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-700">Detalles del Paciente</h1>
+            <h1 class="text-3xl font-bold text-blue-700">{patient ? `Detalles de ${patient.name}` : 'Paciente no encontrado'}</h1>
             <a href="/patients" class="text-blue-600 hover:underline">Volver a la lista de pacientes</a>
         </div>
-        <p class="mb-8 text-gray-600 dark:text-gray-400">Mostrando el historial médico del Paciente con el ID: <strong>{id}</strong></p>
-        {id && <MedicalHistory patientId={id} />}
+        {patient ? (
+            <MedicalHistory patientId={patient.id} />
+        ) : (
+            <p class="text-red-500 bg-red-100 dark:bg-red-900/30 p-4 rounded-md">No se pudo cargar la información del paciente. Por favor, vuelva a la lista e intente de nuevo.</p>
+        )}
     </main>
 </Layout>
