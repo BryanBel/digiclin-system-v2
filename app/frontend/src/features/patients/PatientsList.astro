@@ -3,16 +3,25 @@
 ---
 
 <ul id="patients-list" class="m-0 p-2 list-none overflow-auto flex flex-col gap-8 rounded-md border border-gray-300 h-full">
-  <!-- Patient items will be rendered here by the client-side script -->
+  <li id="loading-state" class="text-gray-500 p-4 text-center">
+    Cargando pacientes...
+  </li>
 </ul>
 
 <script>
-  import PatientsModule, { patients } from "./PatientsModule.js";
+  import PatientsModule, { patients } from "./patientsModule";
 
   const patientsList = document.querySelector('#patients-list');
-
-  // Fetch initial data
-  await PatientsModule.getPatients();
+  
+  // Fetch initial data and handle potential errors
+  try {
+    // This will populate the 'patients' store, which triggers the subscription below
+    await PatientsModule.getPatients();
+  } catch (error) {
+    // If the API fails (e.g., server is down, unauthorized), show an error message
+    console.error("Failed to fetch patients:", error);
+    if (patientsList) patientsList.innerHTML = `<li class="text-red-500 p-4 text-center">Error al cargar los pacientes.</li>`;
+  }
 
   // Subscribe to changes in the patients store
   patients.subscribe(allPatients => {
@@ -28,13 +37,15 @@
     } else {
       // Render each patient
       for (const patient of allPatients) {
-        const patientItem = document.createElement('li');
-        patientItem.id = `patient-${patient.id}`;
-        // This is a simplified version of your PatientItem component's output.
-        // You can expand this to match its structure and styling.
-        patientItem.className = 'p-4 border-b flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700';
-        patientItem.innerHTML = `<span class="patient-name">${patient.name}</span>`;
-        fragment.appendChild(patientItem);
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = `/patients/${patient.id}`;
+        // Apply styles to make it look like a clickable list item
+        link.className = 'block p-4 border-b -mb-8 list-none flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150';
+        link.innerHTML = `<span class="patient-name font-medium text-gray-800 dark:text-gray-200">${patient.name}</span>`;
+        
+        li.appendChild(link);
+        fragment.appendChild(li);
       }
     }
     // Replace the list content efficiently in one operation
