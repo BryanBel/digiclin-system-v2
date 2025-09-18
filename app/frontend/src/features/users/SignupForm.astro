@@ -82,26 +82,24 @@
 
       try {
         await AuthModule.register({ email, password });
-        // On success, hide the form and show a confirmation message.
+        // On success, replace the content with a confirmation message.
         const parentContainer = form.parentElement;
         if (parentContainer) {
-          form.style.display = 'none';
-          parentContainer.querySelector('p.text-center')?.remove(); // Remove "Already have an account?" link
-          const successMessage = document.createElement('div');
-          successMessage.className = 'text-center';
-          successMessage.innerHTML = `
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white">¡Registro Exitoso!</h2>
-            <p class="mt-2 text-gray-600 dark:text-gray-400">Hemos enviado un enlace de verificación a tu correo. Por favor, revisa tu bandeja de entrada.</p>
-            <a href="/login" class="mt-4 inline-block font-medium text-blue-600 hover:underline dark:text-blue-500">Volver a Iniciar Sesión</a>
+          parentContainer.innerHTML = `
+            <div class="text-center">
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">¡Registro Exitoso!</h2>
+              <p class="mt-2 text-gray-600 dark:text-gray-400">Hemos enviado un enlace de verificación a tu correo. Por favor, revisa tu bandeja de entrada.</p>
+              <a href="/login" class="mt-4 inline-block font-medium text-blue-600 hover:underline dark:text-blue-500">Volver a Iniciar Sesión</a>
+            </div>
           `;
-          parentContainer.appendChild(successMessage);
         }
       } catch (error: any) {
         console.error('Signup failed:', error);
         const errorData = await error?.response?.json().catch(() => null);
         errorMessageEl.textContent = errorData?.message || 'An unexpected error occurred.';
       } finally {
-        if (form.style.display !== 'none') {
+        // If the form is still in the DOM (i.e., signup was not successful)
+        if (form.parentElement) {
           submitButton.disabled = false;
           submitButton.textContent = originalButtonText;
         }
