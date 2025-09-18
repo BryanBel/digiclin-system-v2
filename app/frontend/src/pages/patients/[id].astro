@@ -37,7 +37,18 @@ const { id } = Astro.params;
             <form id="add-history-form" class="p-6 bg-gray-50 border rounded-lg flex flex-col">
               <h3 class="text-lg font-semibold mb-4">Añadir Nueva Entrada</h3>
               <div class="flex flex-col gap-4 flex-grow">
-                <textarea id="history-description" rows="5" placeholder="Descripción de la consulta, diagnóstico, tratamiento..." class="w-full p-2 border rounded flex-grow" required></textarea>
+                <div>
+                  <label for="history-description" class="block text-sm font-medium text-gray-700 mb-1">Consulta / Diagnóstico</label>
+                  <textarea id="history-description" rows="4" placeholder="Descripción de la consulta, diagnóstico..." class="w-full p-2 border rounded" required></textarea>
+                </div>
+                <div>
+                  <label for="history-treatment" class="block text-sm font-medium text-gray-700 mb-1">Tratamiento</label>
+                  <textarea id="history-treatment" rows="4" placeholder="Tratamiento indicado..." class="w-full p-2 border rounded"></textarea>
+                </div>
+                <div>
+                  <label for="history-recipe" class="block text-sm font-medium text-gray-700 mb-1">Récipe / Indicaciones</label>
+                  <textarea id="history-recipe" rows="4" placeholder="Récipe e indicaciones..." class="w-full p-2 border rounded"></textarea>
+                </div>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start flex items-center justify-center h-10 whitespace-nowrap">
                   <span class="submit-text">Guardar Entrada</span>
                   <span class="loading-spinner hidden animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span>
@@ -89,6 +100,8 @@ const { id } = Astro.params;
   const historyItemTemplate = document.getElementById('history-item-template');
   const addHistoryForm = document.getElementById('add-history-form');
   const historyDescriptionInput = document.getElementById('history-description');
+  const historyTreatmentInput = document.getElementById('history-treatment');
+  const historyRecipeInput = document.getElementById('history-recipe');
   const formStatusMessage = document.getElementById('form-status-message');
 
 
@@ -141,6 +154,8 @@ const { id } = Astro.params;
     const entryData = {
       patient_id: parseInt(patientId, 10),
       description: historyDescriptionInput.value.trim(),
+      treatment: historyTreatmentInput.value.trim(),
+      recipe: historyRecipeInput.value.trim(),
       entry_date: new Date().toISOString(), // La fecha se establece en el cliente
     };
 

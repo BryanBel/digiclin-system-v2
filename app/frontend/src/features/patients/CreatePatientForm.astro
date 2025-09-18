@@ -2,7 +2,7 @@
 ---
 // A form to create a new patient.
 ---
-<form id="create-patient-form" class="flex flex-col gap-4 p-4 border border-gray-300 rounded-md mb-8">
+<form id="create-patient-form" class="flex flex-col gap-4 p-4 border border-black-300 rounded-md mb-8">
   <h3 class="text-lg font-bold">Añade un nuevo paciente</h3>
   <div>
     <label for="patient-name" class="block mb-2 text-sm font-medium text-gray-900">Nombre del paciente</label>
@@ -21,7 +21,7 @@
 </form>
 
 <script>
-  import PatientsModule from './PatientsModule.js';
+  import PatientsModule from './patientsModule.js';
 
   const form = document.getElementById('create-patient-form') as HTMLFormElement | null;
   const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
