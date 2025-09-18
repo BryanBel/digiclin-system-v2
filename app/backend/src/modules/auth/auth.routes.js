@@ -64,7 +64,7 @@ authRouter.post('/login', async (req, res) => {
       403,
       'Por favor, verifica tu correo electrónico antes de iniciar sesión.',
     );
-
+  console.log(user.verify_email);
   const accessToken = jwt.sign(
     { id: user.id, email: user.email },
     process.env.ACCESS_TOKEN_SECRET,

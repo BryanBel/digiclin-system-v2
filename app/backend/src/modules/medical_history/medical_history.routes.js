@@ -47,11 +47,8 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     // El frontend envía { description, patient_id }
-    const { description, patient_id } = req.body;
-
-    // Defensive check: Ensure user is authenticated and attached to the request
+    const { description, patient_id, treatment, recipe } = req.body;
     if (!req.user || !req.user.id) {
-      // This prevents a crash if the authentication middleware fails to attach the user.
       return res.status(401).json({ error: 'Usuario no autenticado o sesión inválida.' });
     }
     // El ID del doctor lo obtenemos del usuario autenticado por el middleware
@@ -59,9 +56,11 @@ router.post('/', async (req, res, next) => {
 
     // Construimos el objeto que espera la función del repositorio
     const newEntryData = {
-      medical_inform: description, // Mapeamos 'description' a 'medical_inform'
+      medical_inform: description,
       patient_id,
       doctor_id,
+      treatment: treatment || '',
+      recipe: recipe || '',
     };
 
     const nuevoRecord = await createMedicalHistory(newEntryData);
