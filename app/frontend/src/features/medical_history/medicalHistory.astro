@@ -12,9 +12,8 @@ const { patientId } = Astro.props;
 </div>
 
 <script>
-  import MedicalHistoryModule, { history } from './medicalHistoryModule.js';
+  import MedicalHistoryModule, { history } from './medical_history.module.js';
 
-  // The patientId is passed from the component's props
   const patientId = Astro.props.patientId;
   const historyList = document.querySelector('#history-list');
 
@@ -24,7 +23,7 @@ const { patientId } = Astro.props;
   // Subscribe to changes
   history.subscribe(records => {
     if (!historyList) return;
-    historyList.innerHTML = ''; // Clear previous entries
+    historyList.innerHTML = '';
 
     if (records.length === 0) {
       historyList.innerHTML = '<li class="text-gray-500">No medical history found.</li>';

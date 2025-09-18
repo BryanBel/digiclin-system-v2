@@ -14,7 +14,7 @@ export const prerender = false
 <script>
   // @ts-nocheck
   import ky from 'ky';
-  import { BACK_ENDPOINT } from '../../config/endpoints';
+  import { BACK_ENDPOINT } from '../../config/endpoint';
   const token = window.location.pathname.split('/verify/')[1];
   const verifyText = document.querySelector('#verify-text');
   try {
