@@ -5,6 +5,8 @@ import icon from 'astro-icon';
 import tailwind from '@tailwindcss/vite';
 
 export default defineConfig({
+  // Especifica explícitamente que la salida es para un servidor (SSR).
+  output: 'server',
   // Add the node adapter for SSR
   adapter: node({
     mode: 'middleware' 

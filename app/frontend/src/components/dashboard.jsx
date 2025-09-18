@@ -21,11 +21,11 @@ export default function Dashboard() {
     },
     {
       icon: UserIcon,
-      title: 'Doctores',
-      description: 'Administración de personal médico.',
-      buttonText: 'Ver doctores',
+      title: 'Historia Clínica',
+      description: 'Administración del historial médico.',
+      buttonText: 'Ver historial médico',
       themeColor: 'purple',
-      path: '/doctors',
+      path: '/medical-history',
     },
   ];
 

@@ -18,8 +18,8 @@ const createAllTables = async () => {
     `CREATE TABLE patients (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      cedula TEXT NOT NULL
+      phone TEXT,
+      cedula TEXT
     )`,
     `CREATE TABLE medical_history (
       id SERIAL PRIMARY KEY,
