@@ -1,6 +1,6 @@
 import { atom } from "nanostores";
 import { createNotification } from "../notifications/notificiation.js";
-import { BACK_ENDPOINT } from "../../config/endpoints.js";
+import { BACK_ENDPOINT } from "../../config/endpoint.js";
 import ky from "ky";
 const BASE_URL = `${BACK_ENDPOINT}/api/contacts`;
 

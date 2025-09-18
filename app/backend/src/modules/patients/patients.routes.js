@@ -6,22 +6,22 @@ import {
   updatePatient,
   deletePatient,
 } from './patients.repository.js';
+import { createPatientSchema, updatePatientSchema } from './patients.routes.schemas.js';
 
 const router = Router();
 
-
 // Get all patients
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
     const patients = await getAllPatients();
     res.json(patients);
   } catch (error) {
-    res.status(500).json({ error: 'Error getting patients' });
+    next(error);
   }
 });
 
 // Get patient by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res, next) => {
   try {
     const patient = await getPatientById(req.params.id);
     if (!patient) {
@@ -29,40 +29,46 @@ router.get('/:id', async (req, res) => {
     }
     res.json(patient);
   } catch (error) {
-    res.status(500).json({ error: 'Error getting patient' });
+    next(error);
   }
 });
 
 // Create patient
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
   try {
-    const newPatient = await createPatient(req.body);
+    const patientData = createPatientSchema.body.parse(req.body);
+    const newPatient = await createPatient(patientData);
     res.status(201).json(newPatient);
   } catch (error) {
-    res.status(500).json({ error: 'Error creating patient' });
+    next(error);
   }
 });
 
 // Update patient
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
   try {
-    const updatedPatient = await updatePatient(req.params.id, req.body);
+    const { id } = updatePatientSchema.params.parse(req.params);
+    const patientData = updatePatientSchema.body.parse(req.body);
+    const updatedPatient = await updatePatient(id, patientData);
     if (!updatedPatient) {
       return res.status(404).json({ error: 'Patient not found' });
     }
     res.json(updatedPatient);
   } catch (error) {
-    res.status(500).json({ error: 'Error updating patient' });
+    next(error);
   }
 });
 
 // Delete patient
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res, next) => {
   try {
-    await deletePatient(req.params.id);
-    res.status(204).send();
+    const { id } = req.params;
+    await deletePatient(id);
+    // The frontend expects a JSON response to get the ID of the deleted patient.
+    // A 204 No Content response would cause a JSON parsing error on the client.
+    res.json({ id });
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting patient' });
+    next(error);
   }
 });
 

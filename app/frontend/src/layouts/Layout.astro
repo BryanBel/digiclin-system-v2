@@ -17,16 +17,13 @@ import '../styles/global.css'
 				<div class="flex items-center gap-3">
 					<span class="text-2xl font-bold tracking-wide">DigiClin</span>
 				</div>
-				<div class="flex gap-6 text-lg">
-					<a href="/" class="hover:text-blue-200 transition">Dashboard</a>
-					<a href="/patients" class="hover:text-blue-200 transition">Pacientes</a>
-					<a href="/appointments" class="hover:text-blue-200 transition">Citas</a>
-					<a href="/doctors" class="hover:text-blue-200 transition">Doctores</a>
-				</div>
+				<div id="nav-links" class="flex gap-6 text-lg items-center"></div>
 			</nav>
 			<main>
 				<slot />
 			</main>
+			<div id="notification-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2">
+			</div>
 	</body>
 </html>
 
@@ -38,3 +35,69 @@ import '../styles/global.css'
 		height: 100%;
 	}
 </style>
+
+<script>
+	import { getLinks } from '../features/navigation/navigationUtils.js';
+	import AuthModule, { user } from '../features/auth/authModule.js';
+
+	const navLinksContainer = document.getElementById('nav-links');
+
+	function renderNav() {
+		if (!navLinksContainer) return;
+
+		// Limpiar enlaces existentes
+		navLinksContainer.innerHTML = '';
+
+		const links = getLinks(window.location.pathname);
+		const fragment = document.createDocumentFragment();
+
+		for (const link of links) {
+			if (link.type === 'link') {
+				const a = document.createElement('a');
+				a.href = link.path;
+				a.textContent = link.text;
+				// Si el link está activo, añade una clase para resaltarlo, si no, la clase normal.
+				a.className = link.isActive ? 'text-white font-semibold' : 'text-blue-200 hover:text-white transition';
+				fragment.appendChild(a);
+			} else if (link.type === 'button') {
+				const button = document.createElement('button');
+				button.textContent = link.text;
+				// Estilos para que el botón se vea bien en la barra de navegación
+				// Este estilo unifica el botón con los otros enlaces, pero mantiene una clara indicación de su función al pasar el cursor.
+				button.className = 'border border-white/70 rounded-md px-4 py-1 hover:bg-red-500 hover:border-red-500 transition-colors duration-200';
+				if (link.handler) {
+					button.addEventListener('click', link.handler);
+				}
+				fragment.appendChild(button);
+			}
+		}
+		navLinksContainer.appendChild(fragment);
+	}
+
+	async function initializeApp() {
+		// Esta función se ejecuta en la carga inicial para determinar el estado de autenticación.
+		// Su única responsabilidad es cargar el estado del usuario.
+		// La protección de rutas (redirección) se delega a los componentes de página como `AuthProtected.astro`.
+
+		try {
+			// Intenta obtener el usuario. Si tiene éxito, el `user.subscribe` de abajo llamará a `renderNav`.
+			await AuthModule.getLoggedUser();
+		} catch (error) {
+			// Si falla (no hay sesión válida), el `user` store permanecerá `null`.
+			// Renderizamos explícitamente la barra de navegación para mostrar los enlaces públicos (Login/Registro).
+			// El componente de la página (`AuthProtected`) se encargará de la redirección si es necesario.
+			console.log('Authentication check failed, rendering public navigation links.');
+			renderNav();
+		}
+	}
+
+	// Cuando el estado del usuario cambie (login/logout), se vuelve a renderizar la barra.
+	user.subscribe(renderNav);
+
+	// En navegaciones del lado del cliente (cambiar de página sin recargar), solo volvemos a renderizar la barra.
+	// El estado del usuario ya se conoce de la carga inicial.
+	document.addEventListener('astro:page-load', renderNav);
+
+	// Ejecutar la comprobación de autenticación inicial.
+	initializeApp();
+</script>

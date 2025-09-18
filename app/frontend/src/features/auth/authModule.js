@@ -1,5 +1,5 @@
 import ky from "ky";
-import { BACK_ENDPOINT } from "../../config/endpoints.js";
+import { BACK_ENDPOINT } from "../../config/endpoint.js";
 import { atom } from "nanostores";
 
 export const user = atom(null);

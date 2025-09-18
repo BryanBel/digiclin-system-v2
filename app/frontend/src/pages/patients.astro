@@ -6,11 +6,12 @@ import PatientsList from '../features/patients/PatientsList.astro';
 <Layout>
   <h1 class="text-3xl font-bold text-blue-700 mb-6">Pacientes</h1>
   
-  <main class="flex flex-col gap-8 md:flex-row">
-    <section class="md:w-[40%]">
+  <!-- Usamos CSS Grid para alinear la altura y mantener la proporción de ancho -->
+  <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+    <section class="lg:col-span-2">
       <CreatePatientForm />
     </section>
-    <section class="md:w-[60%]">
+    <section class="lg:col-span-3 bg-gray-800 rounded-lg">
       <PatientsList />
     </section>
   </main>

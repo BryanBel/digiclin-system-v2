@@ -1,33 +1,206 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import MedicalHistory from "../../features/medical_history/medicalHistory.astro";
-import PatientsModule from "../../features/patients/PatientsModule.js";
-
-export const prerender = false; // Activa SSR para esta ruta dinámica, le decimos a Astro que no pre-renderice esta página.
+import Layout from '../../layouts/Layout.astro';
+import AuthProtected from '../../features/auth/AuthProtected.astro';
 const { id } = Astro.params;
-
-let patient = null;
-if (id) {
-    try {
-        // Assuming your module has a method to fetch a single patient
-        patient = await PatientsModule.getPatientById(id);
-    } catch (error) {
-        console.error(`Failed to fetch patient with id ${id}:`, error);
-        // In a real app, you might redirect to a 404 page or show a dedicated error component
-    }
-}
 ---
-
-<Layout>
-    <main class="p-4 md:p-8 max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-700">{patient ? `Detalles de ${patient.name}` : 'Paciente no encontrado'}</h1>
-            <a href="/patients" class="text-blue-600 hover:underline">Volver a la lista de pacientes</a>
+<Layout title={`Detalles del Paciente ${id}`}>
+  <AuthProtected>
+    <main id="patient-detail-page" data-patient-id={id} class="container mx-auto p-8">
+      <div id="loading-state" class="text-center p-8">
+        <p class="text-gray-500">Cargando datos del paciente...</p>
+      </div>
+  
+      <div id="error-state" class="hidden text-center p-8 bg-red-100 border border-red-400 text-red-700 rounded">
+        <p id="error-message"></p>
+      </div>
+  
+      <div id="patient-content" class="hidden">
+        <a href="/patients" class="text-blue-600 hover:underline mb-6 inline-block">&larr; Volver a la lista de pacientes</a>
+        <h1 id="patient-name" class="text-4xl font-bold text-gray-800 mb-4"></h1>
+  
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600">
+          <div>
+            <p class="font-semibold">Cédula:</p>
+            <p id="patient-cedula"></p>
+          </div>
+          <div>
+            <p class="font-semibold">Teléfono:</p>
+            <p id="patient-phone"></p>
+          </div>
         </div>
-        {patient ? (
-            <MedicalHistory patientId={patient.id} />
-        ) : (
-            <p class="text-red-500 bg-red-100 dark:bg-red-900/30 p-4 rounded-md">No se pudo cargar la información del paciente. Por favor, vuelva a la lista e intente de nuevo.</p>
-        )}
+        
+        <div class="mt-8 border-t pt-8">
+          <h2 class="text-2xl font-semibold text-gray-700 mb-4">Historia Clínica</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Formulario para añadir nueva entrada -->
+            <form id="add-history-form" class="p-6 bg-gray-50 border rounded-lg flex flex-col">
+              <h3 class="text-lg font-semibold mb-4">Añadir Nueva Entrada</h3>
+              <div class="flex flex-col gap-4 flex-grow">
+                <textarea id="history-description" rows="5" placeholder="Descripción de la consulta, diagnóstico, tratamiento..." class="w-full p-2 border rounded flex-grow" required></textarea>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start flex items-center justify-center h-10 whitespace-nowrap">
+                  <span class="submit-text">Guardar Entrada</span>
+                  <span class="loading-spinner hidden animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span>
+                </button>
+                <div id="form-status-message" class="mt-2 text-sm h-5"></div>
+              </div>
+            </form>
+    
+            <!-- Lista de entradas del historial médico -->
+            <div id="history-list-container" class="bg-gray-800 p-6 rounded-lg">
+              <p id="no-history-message" class="text-gray-400">No hay entradas en el historial médico para este paciente.</p>
+              <ul id="history-list" class="space-y-4">
+                <!-- Las entradas del historial se insertarán aquí dinámicamente -->
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Plantilla para una entrada del historial -->
+          <template id="history-item-template">
+            <li class="p-4 border border-gray-600 rounded-lg bg-gray-700">
+              <p class="font-semibold text-gray-100" data-template-description></p>
+              <p class="text-sm text-gray-400 mt-1" data-template-date></p>
+            </li>
+          </template>
+        </div>
+      </div>
     </main>
+  </AuthProtected>
 </Layout>
+
+<script>
+  import PatientsModule, { currentPatient } from '../../features/patients/PatientsModule.js';
+  import MedicalHistoryModule, { history } from '../../features/medical_history/medical_history.module.js';
+
+  const page = document.getElementById('patient-detail-page');
+  const patientId = page?.dataset.patientId;
+
+  const loadingState = document.getElementById('loading-state');
+  const errorState = document.getElementById('error-state');
+  const errorMessage = document.getElementById('error-message');
+  const patientContent = document.getElementById('patient-content');
+  const patientNameEl = document.getElementById('patient-name');
+  const patientCedulaEl = document.getElementById('patient-cedula');
+  const patientPhoneEl = document.getElementById('patient-phone');
+
+  // Elementos del historial médico
+  const historyList = document.getElementById('history-list');
+  const noHistoryMessage = document.getElementById('no-history-message');
+  const historyItemTemplate = document.getElementById('history-item-template');
+  const addHistoryForm = document.getElementById('add-history-form');
+  const historyDescriptionInput = document.getElementById('history-description');
+  const formStatusMessage = document.getElementById('form-status-message');
+
+
+  // Suscripción para actualizar los datos del paciente
+  const unsubscribePatient = currentPatient.subscribe(patient => {
+    if (patient && patientNameEl && patientCedulaEl && patientPhoneEl) {
+      patientNameEl.textContent = patient.name;
+      patientCedulaEl.textContent = patient.cedula || 'No especificado';
+      patientPhoneEl.textContent = patient.phone || 'No especificado';
+
+      loadingState?.classList.add('hidden');
+      errorState?.classList.add('hidden');
+      patientContent?.classList.remove('hidden');
+    }
+  });
+
+  // Suscripción para actualizar la lista del historial médico
+  const unsubscribeHistory = history.subscribe(entries => {
+    if (!historyList || !noHistoryMessage || !historyItemTemplate) return;
+
+    historyList.innerHTML = ''; // Limpiar lista
+
+    if (entries.length === 0) {
+      noHistoryMessage.classList.remove('hidden');
+    } else {
+      noHistoryMessage.classList.add('hidden');
+      const fragment = document.createDocumentFragment();
+      for (const entry of entries) {
+        const templateNode = historyItemTemplate.content.cloneNode(true);
+        const descriptionEl = templateNode.querySelector('[data-template-description]');
+        const dateEl = templateNode.querySelector('[data-template-date]');
+        
+        descriptionEl.textContent = entry.medical_inform;
+        dateEl.textContent = `Fecha: ${new Date(entry.entry_date).toLocaleDateString()}`;
+        
+        fragment.appendChild(templateNode);
+      }
+      historyList.appendChild(fragment);
+    }
+  });
+
+  // Manejar el envío del formulario para añadir historial
+  addHistoryForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!patientId || !historyDescriptionInput.value.trim()) return;
+
+    // Limpiar mensaje de estado previo
+    if (formStatusMessage) formStatusMessage.textContent = '';
+
+    const entryData = {
+      patient_id: parseInt(patientId, 10),
+      description: historyDescriptionInput.value.trim(),
+      entry_date: new Date().toISOString(), // La fecha se establece en el cliente
+    };
+
+    const submitButton = addHistoryForm.querySelector('button[type="submit"]');
+    const submitText = submitButton.querySelector('.submit-text');
+    const loadingSpinner = submitButton.querySelector('.loading-spinner');
+
+    try {
+      submitButton.disabled = true;
+      submitText.classList.add('hidden');
+      loadingSpinner.classList.remove('hidden');
+
+      await MedicalHistoryModule.addHistoryEntry(entryData);
+      addHistoryForm.reset(); // Limpiar el formulario
+      
+      // Mostrar mensaje de éxito
+      if (formStatusMessage) {
+        formStatusMessage.textContent = 'Entrada guardada con éxito.';
+        formStatusMessage.className = 'mt-2 text-sm h-5 text-green-600';
+        setTimeout(() => {
+          if (formStatusMessage) formStatusMessage.textContent = '';
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error al guardar la entrada:', error);
+      // Mostrar mensaje de error en el formulario
+      if (formStatusMessage) {
+        formStatusMessage.textContent = 'Error: No se pudo guardar la entrada. Inténtelo de nuevo.';
+        formStatusMessage.className = 'mt-2 text-sm h-5 text-red-600';
+      }
+    } finally {
+      submitButton.disabled = false;
+      submitText.classList.remove('hidden');
+      loadingSpinner.classList.add('hidden');
+    }
+  });
+
+  // Cargar los datos iniciales cuando la página carga
+  if (patientId) {
+    Promise.all([
+      PatientsModule.getPatientById(patientId),
+      MedicalHistoryModule.getHistoryByPatientId(patientId)
+    ]).catch(err => {
+      console.error("Failed to load patient data:", err);
+      loadingState?.classList.add('hidden');
+      patientContent?.classList.add('hidden'); // Ensure content is hidden on error
+      if (errorState && errorMessage) {
+        // Mostramos un mensaje genérico en español en lugar de err.message
+        errorMessage.textContent = 'No se pudo cargar la información del paciente. Verifique su conexión o intente más tarde.';
+        errorState.classList.remove('hidden');
+      }
+    });
+  }
+
+  // Limpiar suscripciones y stores al navegar fuera de la página
+  // para evitar fugas de memoria y datos incorrectos en otras páginas.
+  document.addEventListener('astro:before-swap', () => {
+    unsubscribePatient();
+    unsubscribeHistory();
+    currentPatient.set(null);
+    history.set([]);
+  }, { once: true });
+</script>

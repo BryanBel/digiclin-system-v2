@@ -1,5 +1,5 @@
 import express from 'express';
-import { ZodError } from 'zod/v4';
+import { ZodError } from 'zod';
 import { ErrorWithStatus } from './src/utils/errorTypes.js';
 import { DatabaseError } from 'pg';
 import cors from 'cors';
@@ -19,8 +19,7 @@ export const createAndConfigureApp = async () => {
 
   //se agrega /api/
   app.use('/api/auth', authRouter);
-  app.use('/api/patients', patientsRouter);
-  app.use('/api/medical-history', medicalHistoryRouter);
+  app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
 
   app.use((err, req, res, _next) => {

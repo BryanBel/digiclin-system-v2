@@ -2,7 +2,7 @@
 ---
 ---
 
-<ul id="patients-list" class="m-0 p-2 list-none overflow-auto flex flex-col gap-8 rounded-md border border-gray-300 h-full">
+<ul id="patients-list" class="m-0 p-0 list-none overflow-auto rounded-md border border-gray-300 h-full divide-y divide-gray-200 dark:divide-gray-700" bg-color="blue-500" dark:bg-gray-800>
   <li id="loading-state" class="text-gray-500 p-4 text-center">
     Cargando pacientes...
   </li>
@@ -24,7 +24,7 @@
   }
 
   // Subscribe to changes in the patients store
-  patients.subscribe(allPatients => {
+  const unsubscribe = patients.subscribe(allPatients => {
     if (!patientsList) return;
 
     const fragment = document.createDocumentFragment();
@@ -39,11 +39,22 @@
       for (const patient of allPatients) {
         const li = document.createElement('li');
         const link = document.createElement('a');
+        const nameSpan = document.createElement('span');
+
         link.href = `/patients/${patient.id}`;
-        // Apply styles to make it look like a clickable list item
-        link.className = 'block p-4 border-b -mb-8 list-none flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150';
-        link.innerHTML = `<span class="patient-name font-medium text-gray-800 dark:text-gray-200">${patient.name}</span>`;
-        
+        link.className = 'block p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150';
+
+        nameSpan.className = 'patient-name font-medium text-gray-800 dark:text-gray-200';
+        nameSpan.textContent = patient.name;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.innerHTML = '&#10005;'; // A simple 'X' icon
+        deleteButton.className = 'delete-patient-btn text-red-500 hover:text-red-700 text-lg font-bold p-2 rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-100 transition-colors duration-150';
+        deleteButton.title = `Eliminar a ${patient.name}`;
+        deleteButton.dataset.patientId = patient.id;
+
+        link.appendChild(nameSpan);
+        link.appendChild(deleteButton);
         li.appendChild(link);
         fragment.appendChild(li);
       }
@@ -51,4 +62,32 @@
     // Replace the list content efficiently in one operation
     patientsList.replaceChildren(fragment);
   });
+
+  // Use event delegation to handle clicks on delete buttons
+  if (patientsList) {
+    patientsList.addEventListener('click', async (event) => {
+      const target = event.target.closest('.delete-patient-btn');
+
+      if (target) {
+        event.preventDefault(); // Prevent the link from navigating
+        event.stopPropagation(); // Stop the event from bubbling up
+
+        const patientId = target.dataset.patientId;
+        const patientName = target.closest('a').querySelector('.patient-name')?.textContent || 'este paciente';
+
+        if (patientId && window.confirm(`¿Estás seguro de que quieres eliminar a ${patientName}?`)) {
+          try {
+            target.disabled = true;
+            await PatientsModule.removePatient(patientId);
+            // The list will re-render automatically thanks to the nanostore subscription.
+          } catch (error) {
+            target.disabled = false; // Re-enable button on failure
+          }
+        }
+      }
+    });
+  }
+
+  // Clean up the subscription when the user navigates to another page
+  document.addEventListener('astro:before-swap', unsubscribe, { once: true });
 </script>
