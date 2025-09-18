@@ -27,7 +27,8 @@ authRouter.post('/register', async (req, res) => {
     { expiresIn: '1h' },
   );
 
-  const verificationUrl = `${process.env.BACKEND_URL}/api/auth/verify-email/${verificationToken}`;
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+  const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
   await nodemailerService.sendMail({
     from: process.env.EMAIL_USER,
@@ -46,7 +47,7 @@ authRouter.get('/verify-email/:token', async (req, res) => {
   try {
     const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
     await usersRepository.verifyOne({ id: decodedToken.id });
-    res.redirect(`${frontendUrl}/email-verified`);
+    res.redirect(`${frontendUrl}/login`);
   } catch (error) {
     res.redirect(`${frontendUrl}/email-verification-failed`);
   }
