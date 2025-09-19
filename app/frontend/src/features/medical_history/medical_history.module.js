@@ -1,8 +1,8 @@
 import { atom } from 'nanostores';
 import ky from 'ky';
-import { BACK_ENDPOINT } from '../../config/endpoint.js';
+// import { BACK_ENDPOINT } from '../../config/endpoint.js';
 
-const BASE_URL = `${BACK_ENDPOINT}/api/medical-history`;
+const BASE_URL = `http://localhost:3000/api/medical-history`;
 
 export const history = atom([]);
 
@@ -13,9 +13,11 @@ const MedicalHistoryModule = {
         .get(`${BASE_URL}/patient/${patientId}`, { credentials: 'include' })
         .json();
       history.set(historyData);
+      return historyData;
     } catch (error) {
       console.error('Failed to fetch medical history:', error);
       history.set([]);
+      return [];
     }
   },
   addHistoryEntry: async (entryData) => {
@@ -24,7 +26,6 @@ const MedicalHistoryModule = {
         json: entryData,
         credentials: 'include',
       }).json();
-      // After adding, re-fetch the history to update the list
       await MedicalHistoryModule.getHistoryByPatientId(entryData.patient_id);
     } catch (error) {
       console.error('Failed to add medical history entry:', error);

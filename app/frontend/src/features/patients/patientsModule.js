@@ -9,10 +9,10 @@ const BASE_URL = `${BACK_ENDPOINT}/api/patients`;
 /** 
   * @typedef Patient
   * @type {object}
-  * @property {string} id The id of the patient
-  * @property {string} name The name of the patient
-  * @property {string | null} cedula The national ID of the patient
-  * @property {string | null} phone The phone number of the patient
+  * @property {string} id 
+  * @property {string} name 
+  * @property {string | null} cedula 
+  * @property {string | null} phone
 */
 
 /** @type {import("nanostores").Atom<Patient[]>} */
@@ -31,7 +31,6 @@ const PatientsModule = {
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         location.replace('/login');
       }
-      // Re-throw so the UI layer can handle it
       throw error;
     }
   },
@@ -46,9 +45,7 @@ const PatientsModule = {
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         location.replace('/login');
       }
-      // Re-throw the error so the calling component can handle UI updates
       const errorData = await error.response.json();
-      // This makes the error message available in the .catch() block on the page
       throw new Error(errorData.error || 'Error al obtener los datos del paciente.');
     }
   },
@@ -67,7 +64,6 @@ const PatientsModule = {
         description: errorMessage,
         type: 'error'
       });
-      // Re-throw a new, more specific error for the form to display
       throw new Error(errorMessage);
     }
   },
@@ -97,9 +93,7 @@ const PatientsModule = {
   removePatient: async (id) => {
     const url = `${BASE_URL}/${id}`;
     try {
-      // The backend now correctly returns the ID of the deleted patient
       const { id: deletedId } = await ky.delete(url, { credentials: 'include' }).json();
-      // Convert the returned string ID to a number for correct comparison
       patients.set(patients.get().filter(p => p.id !== Number(deletedId)));
       createNotification({ title: 'Paciente eliminado', type: 'success' });
     } catch (error) {

@@ -7,8 +7,10 @@ import { authenticateUser } from './src/modules/auth/auth.middlewares.js';
 import authRouter from './src/modules/auth/auth.routes.js';
 import patientsRouter from './src/modules/patients/patients.routes.js';
 import medicalHistoryRouter from './src/modules/medical_history/medical_history.routes.js';
+import attachmentsRouter from './src/modules/attachments/attachments.routes.js';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 
 export const createAndConfigureApp = async () => {
   const app = express();
@@ -17,10 +19,14 @@ export const createAndConfigureApp = async () => {
   app.use(express.json());
   app.use(cookieParser());
 
+  // Serve static uploaded files
+  app.use('/uploads', express.static(path.join(import.meta.dirname, 'public', 'uploads')));
+
   //se agrega /api/
   app.use('/api/auth', authRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
+  app.use('/api', authenticateUser, attachmentsRouter); // Attachments routes
 
   app.use((err, req, res, _next) => {
     console.log(err);
@@ -53,8 +59,6 @@ export const createAndConfigureApp = async () => {
     res.status(500).json({ error: 'HUBO UN ERROR' });
   });
 
-  // In production, serve the SSR'd frontend.
-  // This must be after API routes and error handlers.
   if (process.env.NODE_ENV === 'prod') {
     const path = await import('path');
     const { handler: ssrHandler } = await import('./dist/server/entry.mjs');
