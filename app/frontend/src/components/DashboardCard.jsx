@@ -6,8 +6,8 @@ export default function DashboardCard({
   description,
   buttonText,
   onButtonClick,
-  themeColor = 'blue', // tema por defecto
-  bgColorClass, // Nueva prop para la clase de fondo
+  themeColor = 'blue',
+  bgColorClass, 
 }) {
   const themeClasses = {
     blue: {

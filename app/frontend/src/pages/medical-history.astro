@@ -1,15 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { UserIcon } from '@heroicons/react/24/outline'; // Import the icon
+import MedicalHistoryPageContent from '../components/MedicalHistoryPageContent.jsx';
 ---
 <Layout>
   <main class="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-purple-100 via-purple-300 to-purple-500 p-4">
-    <div class="max-w-7xl mx-auto py-10 px-4">
-      <h1 class="text-4xl font-extrabold mb-10 flex items-center gap-3 text-purple-900 drop-shadow-lg">
-        <UserIcon className="h-14 w-14 text-purple-700" /> {/* Add the icon */}
-        Historia Clínica
-      </h1>
-      <p class="text-gray-700">Administracion y gestion del historial médico de los pacientes.</p>
-    </div>
+    <MedicalHistoryPageContent client:load />
   </main>
 </Layout>

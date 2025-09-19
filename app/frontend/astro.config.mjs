@@ -7,7 +7,7 @@ import tailwind from '@tailwindcss/vite';
 export default defineConfig({
   // Especifica explícitamente que la salida es para un servidor (SSR).
   output: 'server',
-  // Add the node adapter for SSR
+  // Añado el adaptador SSR
   adapter: node({
     mode: 'middleware' 
   }),

@@ -2,6 +2,7 @@ import pool from './pool.js';
 
 const createAllTables = async () => {
   const dropQueries = [
+    'DROP TABLE IF EXISTS attachments CASCADE',
     'DROP TABLE IF EXISTS medical_history CASCADE',
     'DROP TABLE IF EXISTS patients CASCADE',
     'DROP TABLE IF EXISTS users CASCADE',
@@ -29,6 +30,14 @@ const createAllTables = async () => {
       recipe TEXT NOT NULL,
       patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
       doctor_id UUID REFERENCES users(id) ON DELETE SET NULL
+    )`,
+    `CREATE TABLE attachments (
+      id SERIAL PRIMARY KEY,
+      filename TEXT NOT NULL,
+      filepath TEXT NOT NULL,
+      mimetype TEXT NOT NULL,
+      medical_history_id INTEGER NOT NULL REFERENCES medical_history(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`,
   ];
 

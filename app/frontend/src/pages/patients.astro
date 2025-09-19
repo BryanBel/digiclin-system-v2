@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import CreatePatientForm from '../features/patients/CreatePatientForm.astro';
 import PatientsList from '../features/patients/PatientsList.astro';
-import { UserGroupIcon } from '@heroicons/react/24/outline'; // Import the icon
+import { UserGroupIcon } from '@heroicons/react/24/outline';
 ---
 <Layout>
   <main class="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-blue-100 via-blue-300 to-blue-500 p-4">
@@ -11,7 +11,7 @@ import { UserGroupIcon } from '@heroicons/react/24/outline'; // Import the icon
         <UserGroupIcon className="h-14 w-14 text-blue-700" /> {/* Add the icon */}
         Pacientes
       </h1>
-      <!-- Usamos CSS Grid para alinear la altura y mantener la proporción de ancho -->
+      <!-- Uso CSS Grid para alinear la altura y mantener la proporción de ancho -->
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <section class="lg:col-span-2">
           <CreatePatientForm />
