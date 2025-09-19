@@ -31,44 +31,22 @@ const { id } = Astro.params;
         </div>
         
         <div class="mt-8 border-t pt-8">
-          <h2 class="text-2xl font-semibold text-gray-700 mb-4">Historia Clínica</h2>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Formulario para añadir nueva entrada -->
-            <form id="add-history-form" class="p-6 bg-gray-50 border rounded-lg flex flex-col">
-              <h3 class="text-lg font-semibold mb-4">Añadir Nueva Entrada</h3>
-              <div class="flex flex-col gap-4 flex-grow">
-                <div>
-                  <label for="history-description" class="block text-sm font-medium text-gray-700 mb-1">Consulta / Diagnóstico</label>
-                  <textarea id="history-description" rows="4" placeholder="Descripción de la consulta, diagnóstico..." class="w-full p-2 border rounded" required></textarea>
-                </div>
-                <div>
-                  <label for="history-treatment" class="block text-sm font-medium text-gray-700 mb-1">Tratamiento</label>
-                  <textarea id="history-treatment" rows="4" placeholder="Tratamiento indicado..." class="w-full p-2 border rounded"></textarea>
-                </div>
-                <div>
-                  <label for="history-recipe" class="block text-sm font-medium text-gray-700 mb-1">Récipe / Indicaciones</label>
-                  <textarea id="history-recipe" rows="4" placeholder="Récipe e indicaciones..." class="w-full p-2 border rounded"></textarea>
-                </div>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start flex items-center justify-center h-10 whitespace-nowrap">
-                  <span class="submit-text">Guardar Entrada</span>
-                  <span class="loading-spinner hidden animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span>
-                </button>
-                <div id="form-status-message" class="mt-2 text-sm h-5"></div>
+            <!-- Última entrada del historial médico -->
+            <div id="last-history-entry-container" class="bg-gray-800 p-6 rounded-lg hidden">
+              <h3 class="text-xl font-semibold text-gray-100 mb-4">Última Entrada del Historial</h3>
+              <div id="last-history-entry-content">
+                <!-- Contenido de la última entrada se insertará aquí -->
               </div>
-            </form>
-    
-            <!-- Lista de entradas del historial médico -->
-            <div id="history-list-container" class="bg-gray-800 p-6 rounded-lg">
-              <p id="no-history-message" class="text-gray-400">No hay entradas en el historial médico para este paciente.</p>
-              <ul id="history-list" class="space-y-4">
-                <!-- Las entradas del historial se insertarán aquí dinámicamente -->
-              </ul>
+              <a id="view-full-history-button" href="#" class="mt-4 inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Ver Historial Completo</a>
             </div>
+
+            <p id="no-history-message" class="text-gray-400 hidden">No hay entradas en el historial médico para este paciente.</p>
           </div>
           
           <!-- Plantilla para una entrada del historial -->
           <template id="history-item-template">
-            <li class="p-4 border border-gray-600 rounded-lg bg-gray-700">
+            <li class="p-4 border border-gray-600 rounded-lg bg-gray-700 cursor-pointer hover:bg-gray-600 transition-colors duration-200">
               <p class="font-semibold text-gray-100" data-template-description></p>
               <p class="text-sm text-gray-400 mt-1" data-template-date></p>
             </li>
@@ -80,7 +58,7 @@ const { id } = Astro.params;
 </Layout>
 
 <script>
-  import PatientsModule, { currentPatient } from '../../features/patients/PatientsModule.js';
+  import PatientsModule, { currentPatient } from '../../features/patients/patientsModule.js';
   import MedicalHistoryModule, { history } from '../../features/medical_history/medical_history.module.js';
 
   const page = document.getElementById('patient-detail-page');
@@ -95,15 +73,17 @@ const { id } = Astro.params;
   const patientPhoneEl = document.getElementById('patient-phone');
 
   // Elementos del historial médico
-  const historyList = document.getElementById('history-list');
+  const lastHistoryEntryContainer = document.getElementById('last-history-entry-container');
+  const lastHistoryEntryContent = document.getElementById('last-history-entry-content');
   const noHistoryMessage = document.getElementById('no-history-message');
   const historyItemTemplate = document.getElementById('history-item-template');
-  const addHistoryForm = document.getElementById('add-history-form');
-  const historyDescriptionInput = document.getElementById('history-description');
-  const historyTreatmentInput = document.getElementById('history-treatment');
-  const historyRecipeInput = document.getElementById('history-recipe');
-  const formStatusMessage = document.getElementById('form-status-message');
+  const viewFullHistoryButton = document.getElementById('view-full-history-button');
 
+  const formatDate = (entry_date) => {
+    if (!entry_date) return 'Fecha desconocida';
+    const date = new Date(entry_date);
+    return isNaN(date.getTime()) ? 'Fecha inválida' : date.toLocaleDateString();
+  };
 
   // Suscripción para actualizar los datos del paciente
   const unsubscribePatient = currentPatient.subscribe(patient => {
@@ -120,76 +100,40 @@ const { id } = Astro.params;
 
   // Suscripción para actualizar la lista del historial médico
   const unsubscribeHistory = history.subscribe(entries => {
-    if (!historyList || !noHistoryMessage || !historyItemTemplate) return;
+    if (!lastHistoryEntryContainer || !lastHistoryEntryContent || !noHistoryMessage || !viewFullHistoryButton) return;
 
-    historyList.innerHTML = ''; // Limpiar lista
+    // Clear previous content
+    lastHistoryEntryContent.innerHTML = '';
+    lastHistoryEntryContainer.classList.add('hidden');
+    noHistoryMessage.classList.add('hidden');
 
     if (entries.length === 0) {
       noHistoryMessage.classList.remove('hidden');
+      viewFullHistoryButton.classList.add('hidden'); // Hide button if no history
     } else {
-      noHistoryMessage.classList.add('hidden');
-      const fragment = document.createDocumentFragment();
-      for (const entry of entries) {
-        const templateNode = historyItemTemplate.content.cloneNode(true);
-        const descriptionEl = templateNode.querySelector('[data-template-description]');
-        const dateEl = templateNode.querySelector('[data-template-date]');
-        
-        descriptionEl.textContent = entry.medical_inform;
-        dateEl.textContent = `Fecha: ${new Date(entry.entry_date).toLocaleDateString()}`;
-        
-        fragment.appendChild(templateNode);
+      lastHistoryEntryContainer.classList.remove('hidden');
+      viewFullHistoryButton.classList.remove('hidden'); // Show button if there's history
+
+      const lastEntry = entries[entries.length - 1]; // Get the last entry
+
+      const templateNode = historyItemTemplate.content.cloneNode(true);
+      const listItem = templateNode.querySelector('li');
+      const descriptionEl = templateNode.querySelector('[data-template-description]');
+      const dateEl = templateNode.querySelector('[data-template-date]');
+
+      descriptionEl.textContent = lastEntry.medical_inform;
+      dateEl.textContent = `Fecha: ${formatDate(lastEntry.date)}`;
+
+      // Make the list item clickable and navigate to the detail page
+      if (listItem) {
+        listItem.dataset.entryId = lastEntry.id;
+        listItem.addEventListener('click', () => {
+          window.location.href = `/medical-history/entry/${lastEntry.id}`;
+        });
       }
-      historyList.appendChild(fragment);
-    }
-  });
 
-  // Manejar el envío del formulario para añadir historial
-  addHistoryForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!patientId || !historyDescriptionInput.value.trim()) return;
-
-    // Limpiar mensaje de estado previo
-    if (formStatusMessage) formStatusMessage.textContent = '';
-
-    const entryData = {
-      patient_id: parseInt(patientId, 10),
-      description: historyDescriptionInput.value.trim(),
-      treatment: historyTreatmentInput.value.trim(),
-      recipe: historyRecipeInput.value.trim(),
-      entry_date: new Date().toISOString(), // La fecha se establece en el cliente
-    };
-
-    const submitButton = addHistoryForm.querySelector('button[type="submit"]');
-    const submitText = submitButton.querySelector('.submit-text');
-    const loadingSpinner = submitButton.querySelector('.loading-spinner');
-
-    try {
-      submitButton.disabled = true;
-      submitText.classList.add('hidden');
-      loadingSpinner.classList.remove('hidden');
-
-      await MedicalHistoryModule.addHistoryEntry(entryData);
-      addHistoryForm.reset(); // Limpiar el formulario
-      
-      // Mostrar mensaje de éxito
-      if (formStatusMessage) {
-        formStatusMessage.textContent = 'Entrada guardada con éxito.';
-        formStatusMessage.className = 'mt-2 text-sm h-5 text-green-600';
-        setTimeout(() => {
-          if (formStatusMessage) formStatusMessage.textContent = '';
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Error al guardar la entrada:', error);
-      // Mostrar mensaje de error en el formulario
-      if (formStatusMessage) {
-        formStatusMessage.textContent = 'Error: No se pudo guardar la entrada. Inténtelo de nuevo.';
-        formStatusMessage.className = 'mt-2 text-sm h-5 text-red-600';
-      }
-    } finally {
-      submitButton.disabled = false;
-      submitText.classList.remove('hidden');
-      loadingSpinner.classList.add('hidden');
+      lastHistoryEntryContent.appendChild(templateNode);
+      viewFullHistoryButton.href = `/medical-history/${patientId}`; // Set the link for the button
     }
   });
 

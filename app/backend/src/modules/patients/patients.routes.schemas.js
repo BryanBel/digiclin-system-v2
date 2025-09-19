@@ -15,6 +15,6 @@ export const updatePatientSchema = {
     cedula: z.string().optional().nullable(),
   }),
   params: z.object({
-    id: z.string(), // The ID comes as a string from params
+    id: z.string(),
   }),
 };

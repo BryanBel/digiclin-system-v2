@@ -12,18 +12,17 @@
   import PatientsModule, { patients } from "./patientsModule";
 
   const patientsList = document.querySelector('#patients-list');
-  
-  // Fetch initial data and handle potential errors
+
   try {
-    // This will populate the 'patients' store, which triggers the subscription below
+    // consigue la lista inicial de pacientes y elimina el estado de carga (suscripcion)
     await PatientsModule.getPatients();
   } catch (error) {
-    // If the API fails (e.g., server is down, unauthorized), show an error message
+    // mensaje de error
     console.error("Failed to fetch patients:", error);
     if (patientsList) patientsList.innerHTML = `<li class="text-red-500 p-4 text-center">Error al cargar los pacientes.</li>`;
   }
 
-  // Subscribe to changes in the patients store
+  // suscribe a los cambios en la lista de pacientes
   const unsubscribe = patients.subscribe(allPatients => {
     if (!patientsList) return;
 
@@ -35,7 +34,7 @@
         noPatientsLi.className = 'text-gray-500 p-4';
         fragment.appendChild(noPatientsLi);
     } else {
-      // Render each patient
+      // renderiza la lista de pacientes
       for (const patient of allPatients) {
         const li = document.createElement('li');
         const link = document.createElement('a');
@@ -59,18 +58,17 @@
         fragment.appendChild(li);
       }
     }
-    // Replace the list content efficiently in one operation
     patientsList.replaceChildren(fragment);
   });
 
-  // Use event delegation to handle clicks on delete buttons
+  // usa el eventlistener para manejar clicks en botones de borrar
   if (patientsList) {
     patientsList.addEventListener('click', async (event) => {
       const target = event.target.closest('.delete-patient-btn');
 
       if (target) {
-        event.preventDefault(); // Prevent the link from navigating
-        event.stopPropagation(); // Stop the event from bubbling up
+        event.preventDefault();
+        event.stopPropagation();
 
         const patientId = target.dataset.patientId;
         const patientName = target.closest('a').querySelector('.patient-name')?.textContent || 'este paciente';
@@ -79,15 +77,15 @@
           try {
             target.disabled = true;
             await PatientsModule.removePatient(patientId);
-            // The list will re-render automatically thanks to the nanostore subscription.
+            // la lista se actualizará automáticamente por la suscripción no es necesario hacer nada más
           } catch (error) {
-            target.disabled = false; // Re-enable button on failure
+            target.disabled = false;
           }
         }
       }
     });
   }
 
-  // Clean up the subscription when the user navigates to another page
+  // lmpide la suscripción cuando el componente se desmonta
   document.addEventListener('astro:before-swap', unsubscribe, { once: true });
 </script>

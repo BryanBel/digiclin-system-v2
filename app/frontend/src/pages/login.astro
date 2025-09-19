@@ -10,7 +10,6 @@ import Layout from "../layouts/Layout.astro";
         <h1 class="text-2xl font-bold text-center text-gray-900 dark:text-white">Inicia sesión</h1>
 
         <form id="login-form" class="space-y-6" novalidate>
-          <!-- Email Field -->
           <div>
             <label for="email" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Correo</label>
             <input
@@ -21,7 +20,6 @@ import Layout from "../layouts/Layout.astro";
             />
           </div>
 
-          <!-- Password Field -->
           <div>
             <label for="password" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
             <input
@@ -32,7 +30,6 @@ import Layout from "../layouts/Layout.astro";
             />
           </div>
 
-          <!-- Submit Button -->
           <button
             type="submit"
             id="submit-button"
@@ -42,7 +39,7 @@ import Layout from "../layouts/Layout.astro";
           </button>
         </form>
         <p class="text-center text-sm text-gray-600 dark:text-gray-400">
-          Don't have an account? <a href="/signup" class="font-medium text-blue-600 hover:underline dark:text-blue-500">Sign up</a>
+          ¿No tienes una cuenta? <a href="/signup" class="font-medium text-blue-600 hover:underline dark:text-blue-500">Sign up</a>
         </p>
       </div>
     </main>
@@ -64,7 +61,6 @@ import Layout from "../layouts/Layout.astro";
     form.addEventListener('submit', async (event: SubmitEvent) => {
       event.preventDefault();
 
-      // Disable button and show loading state for better UX
       submitButton.disabled = true;
       submitButton.textContent = 'Iniciando...';
 
@@ -74,11 +70,9 @@ import Layout from "../layouts/Layout.astro";
 
       try {
         await AuthModule.login({ email, password });
-        // Redirect to the dashboard on successful login
         window.location.assign('/');
       } catch (error: any) {
         console.error('Login failed:', error);
-        // Attempt to parse a more specific error message from the response
         const errorData = await error?.response?.json().catch(() => null);
         createNotification({ 
           title: 'Ups! Hubo un error', 
@@ -86,7 +80,6 @@ import Layout from "../layouts/Layout.astro";
           type: 'error'
         });
       } finally {
-        // Always re-enable the button and restore its original text
         submitButton.disabled = false;
         submitButton.textContent = originalButtonText;
       }

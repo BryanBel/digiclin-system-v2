@@ -64,8 +64,6 @@ router.delete('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     await deletePatient(id);
-    // The frontend expects a JSON response to get the ID of the deleted patient.
-    // A 204 No Content response would cause a JSON parsing error on the client.
     res.json({ id });
   } catch (error) {
     next(error);

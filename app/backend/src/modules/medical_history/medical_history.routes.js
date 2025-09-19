@@ -47,7 +47,7 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     // El frontend envía { description, patient_id }
-    const { description, patient_id, treatment, recipe } = req.body;
+    const { description, patient_id, treatment, recipe, entry_date } = req.body;
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuario no autenticado o sesión inválida.' });
     }
@@ -61,6 +61,7 @@ router.post('/', async (req, res, next) => {
       doctor_id,
       treatment: treatment || '',
       recipe: recipe || '',
+      date: entry_date, // passing the date to the repository
     };
 
     const nuevoRecord = await createMedicalHistory(newEntryData);
