@@ -27,7 +27,7 @@ authRouter.post('/register', async (req, res) => {
     { expiresIn: '1h' },
   );
 
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+  const backendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
   await nodemailerService.sendMail({
