@@ -52,8 +52,6 @@ authRouter.get('/verify-email/:token', async (req, res) => {
     res.redirect(`${frontendUrl}/login`);
   } catch (error) {
     res.redirect(`${frontendUrl}/email-verification-failed`);
-    // Si hay un error (token expirado, etc.), redirige a una página de error en el frontend
-    return res.redirect(`${process.env.FRONTEND_URL}/email-verification-failed`);
   }
 });
 
