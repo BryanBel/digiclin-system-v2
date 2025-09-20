@@ -12,7 +12,6 @@ export const getMedicalHistoryById = async (id) => {
 
 export const createMedicalHistory = async (history) => {
   const { medical_inform, treatment, recipe, patient_id, doctor_id, entry_date } = history;
-  const { medical_inform, treatment, recipe, patient_id, doctor_id } = history;
   const result = await db.query(
     'INSERT INTO medical_history (medical_inform, treatment, recipe, patient_id, doctor_id, entry_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
     [medical_inform, treatment, recipe, patient_id, doctor_id, entry_date],
