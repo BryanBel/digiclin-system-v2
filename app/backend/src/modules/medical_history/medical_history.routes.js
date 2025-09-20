@@ -63,8 +63,8 @@ router.post('/', async (req, res, next) => {
       medical_inform: description,
       patient_id,
       doctor_id,
-      treatment: treatment || '',
-      recipe: recipe || '',
+      treatment: treatment || null,
+      recipe: recipe || null,
       entry_date: entry_date || new Date(), // Usar la fecha provista o la actual por defecto
     };
 

@@ -1,8 +1,6 @@
 import { atom } from 'nanostores';
 import ky from 'ky';
-// import { BACK_ENDPOINT } from '../../config/endpoint.js';
-
-const BASE_URL = `https://digiclin-system.onrender.com/api/medical-history`;
+const BASE_URL = '/api/medical-history';
 
 export const history = atom([]);
 
