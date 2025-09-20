@@ -6,9 +6,6 @@
   "scripts": {
     "dev": "concurrently --names \"client,server\" -c \"bgGreen.bold,bgBlue.bold\" \"pnpm --filter client dev\" \"pnpm --filter server dev\"",
     "start": "NODE_ENV=prod pnpm --filter server start",
-    "client:dev": "pnpm --filter client dev",
-    "server:dev": "pnpm --filter server dev",
-    "server:prod": "pnpm --filter server prod",
     "build:client": "rm -rf app/backend/dist && pnpm run --filter client build && cp -r app/frontend/dist app/backend/dist"
   },
   "keywords": [],
