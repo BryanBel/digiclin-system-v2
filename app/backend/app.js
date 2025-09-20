@@ -26,7 +26,7 @@ export const createAndConfigureApp = async () => {
   app.use('/api/auth', authRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
-  app.use('/api', authenticateUser, attachmentsRouter); // Attachments routes
+  app.use('/api/attachments', authenticateUser, attachmentsRouter);
 
   app.use((err, req, res, _next) => {
     console.log(err);
