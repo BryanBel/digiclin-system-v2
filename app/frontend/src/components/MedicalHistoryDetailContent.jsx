@@ -50,7 +50,7 @@ const MedicalHistoryDetailContent = ({ patientId }) => {
 
       try {
         // Fetch patient details
-        const patientResponse = await fetch(`http://localhost:3000/api/patients/${patientId}`, {
+        const patientResponse = await fetch(`/api/patients/${patientId}`, {
           credentials: 'include',
         });
         if (!patientResponse.ok) {
@@ -104,7 +104,7 @@ const MedicalHistoryDetailContent = ({ patientId }) => {
     // Fetch attachments only if not already fetched for this entry
     if (!entryAttachmentsMap[entryId]) {
       try {
-        const response = await fetch(`http://localhost:3000/api/medical-history/${entryId}/attachments`, { credentials: 'include' });
+        const response = await fetch(`/api/medical-history/${entryId}/attachments`, { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch attachments');
         const data = await response.json();
         setEntryAttachmentsMap(prev => ({ ...prev, [entryId]: data }));
@@ -168,7 +168,7 @@ const MedicalHistoryDetailContent = ({ patientId }) => {
                         <li key={file.id} className="py-1 flex items-center gap-1 text-sm">
                           <PaperClipIcon className="h-4 w-4 text-gray-500" />
                           <a
-                            href={`http://localhost:3000/uploads/${file.filename}`}
+                            href={`/uploads/${file.filename}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"

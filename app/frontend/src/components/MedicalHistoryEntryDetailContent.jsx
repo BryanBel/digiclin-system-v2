@@ -15,13 +15,13 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:3000/api/medical-history/${entryId}`, { credentials: 'include' });
+      const response = await fetch(`/api/medical-history/${entryId}`, { credentials: 'include' });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const entryData = await response.json();
       setEntry(entryData);
 
       if (entryData && entryData.patient_id) {
-        const patientResponse = await fetch(`http://localhost:3000/api/patients/${entryData.patient_id}`, { credentials: 'include' });
+        const patientResponse = await fetch(`/api/patients/${entryData.patient_id}`, { credentials: 'include' });
         if (!patientResponse.ok) throw new Error(`HTTP error! status: ${patientResponse.status}`);
         const patientData = await patientResponse.json();
         setPatientName(patientData.name || 'Paciente Desconocido');
@@ -35,7 +35,7 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
   const fetchAttachments = async () => {
     if (!entryId) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/medical-history/${entryId}/attachments`, { credentials: 'include' });
+      const response = await fetch(`/api/medical-history/${entryId}/attachments`, { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch attachments');
       const data = await response.json();
       setAttachments(data);
@@ -66,7 +66,7 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch(`http://localhost:3000/api/medical-history/${entryId}/attachments`, {
+      const response = await fetch(`/api/medical-history/${entryId}/attachments`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -89,7 +89,7 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/medical-history/${entryId}/attachments/${attachmentId}`, {
+      const response = await fetch(`/api/medical-history/${entryId}/attachments/${attachmentId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -139,7 +139,7 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
                   <div className="flex items-center gap-3">
                     <PaperClipIcon className="h-5 w-5 text-gray-500" />
                     <a 
-                      href={`http://localhost:3000/uploads/${file.filename}`}
+                      href={`/uploads/${file.filename}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
