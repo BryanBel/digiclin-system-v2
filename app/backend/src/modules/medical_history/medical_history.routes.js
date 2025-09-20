@@ -24,16 +24,6 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// Obtener historial médico por ID de paciente
-router.get('/patient/:patientId', async (req, res, next) => {
-  try {
-    const history = await getMedicalHistoryByPatientId(req.params.patientId);
-    res.json(history);
-  } catch (error) {
-    next(error);
-  }
-});
-
 // Obtener historial médico por ID
 router.get('/:id', async (req, res, next) => {
   try {
@@ -42,6 +32,16 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Registro no encontrado' });
     }
     res.json(record);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Obtener historial médico por ID de paciente
+router.get('/patient/:patientId', async (req, res, next) => {
+  try {
+    const history = await getMedicalHistoryByPatientId(req.params.patientId);
+    res.json(history);
   } catch (error) {
     next(error);
   }
