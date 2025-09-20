@@ -19,7 +19,7 @@ const MedicalHistoryPageContent = () => {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/patients`, {
+        const response = await fetch(`/api/patients`, {
           credentials: 'include',
         });
         if (!response.ok) {
