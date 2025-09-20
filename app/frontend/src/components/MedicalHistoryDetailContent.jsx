@@ -135,7 +135,7 @@ const MedicalHistoryDetailContent = ({ patientId }) => {
           {medicalHistory.map((entry) => (
             <div key={entry.id} className="bg-white p-4 rounded-lg shadow flex justify-between items-center relative"> {/* Added relative */} 
               <a href={`/medical-history/entry/${entry.id}`} className="block flex-grow">
-                <p className="text-gray-800 font-semibold">Fecha: {formatDate(entry.date)}</p>
+                <p className="text-gray-800 font-semibold">Fecha: {formatDate(entry.entry_date)}</p>
                 <p className="text-gray-700"><strong>Información Médica:</strong> {entry.medical_inform}</p>
                 {entry.treatment && <p className="text-gray-700"><strong>Tratamiento:</strong> {entry.treatment}</p>}
                 {entry.recipe && <p className="text-gray-700"><strong>Receta:</strong> {entry.recipe}</p>}

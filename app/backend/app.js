@@ -7,7 +7,6 @@ import { authenticateUser } from './src/modules/auth/auth.middlewares.js';
 import authRouter from './src/modules/auth/auth.routes.js';
 import patientsRouter from './src/modules/patients/patients.routes.js';
 import medicalHistoryRouter from './src/modules/medical_history/medical_history.routes.js';
-import attachmentsRouter from './src/modules/attachments/attachments.routes.js';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -26,7 +25,6 @@ export const createAndConfigureApp = async () => {
   app.use('/api/auth', authRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
-  app.use('/api/attachments', authenticateUser, attachmentsRouter);
 
   app.use((err, req, res, _next) => {
     console.log(err);

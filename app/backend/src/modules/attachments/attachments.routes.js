@@ -4,11 +4,12 @@ import path from 'path';
 import {
   createAttachment,
   getAttachmentsByMedicalHistoryId,
-  getAttachmentById,
   deleteAttachment,
 } from './attachments.repository.js';
 
-const router = Router();
+// Habilitamos mergeParams para que este router pueda acceder a los parámetros
+// de la ruta padre (ej: /medical-history/:medicalHistoryId)
+const router = Router({ mergeParams: true });
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
@@ -23,8 +24,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// GET all attachments for a medical history entry
-router.get('/medical-history/:medicalHistoryId/attachments', async (req, res, next) => {
+// GET /api/medical-history/:medicalHistoryId/attachments
+router.get('/', async (req, res, next) => {
   try {
     const attachments = await getAttachmentsByMedicalHistoryId(req.params.medicalHistoryId);
     res.json(attachments);
@@ -33,61 +34,39 @@ router.get('/medical-history/:medicalHistoryId/attachments', async (req, res, ne
   }
 });
 
-// POST a new attachment to a medical history entry
-router.post(
-  '/medical-history/:medicalHistoryId/attachments',
-  upload.single('file'),
-  async (req, res, next) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded.' });
-      }
-
-      const { filename, mimetype } = req.file;
-      const filepath = `public/uploads/${filename}`; // Store relative path
-      const medical_history_id = req.params.medicalHistoryId;
-
-      const newAttachment = await createAttachment({
-        filename,
-        filepath,
-        mimetype,
-        medical_history_id,
-      });
-
-      res.status(201).json(newAttachment);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-// GET a specific attachment by its ID and allow download
-router.get('/attachments/:id', async (req, res, next) => {
+// POST /api/medical-history/:medicalHistoryId/attachments
+router.post('/', upload.single('file'), async (req, res, next) => {
   try {
-    const attachment = await getAttachmentById(req.params.id);
-    if (!attachment) {
-      return res.status(404).json({ error: 'Attachment not found.' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'Ningun archivo se ha subido.' });
     }
-    // The filepath is relative to the project root, so we need to construct the absolute path
-    const absoluteFilepath = path.join(process.cwd(), attachment.filepath);
-    res.download(absoluteFilepath, attachment.filename);
+
+    const { filename, mimetype } = req.file;
+    const filepath = `public/uploads/${filename}`; // Store relative path
+    const medical_history_id = req.params.medicalHistoryId;
+
+    const newAttachment = await createAttachment({
+      filename,
+      filepath,
+      mimetype,
+      medical_history_id,
+    });
+
+    res.status(201).json(newAttachment);
   } catch (error) {
     next(error);
   }
 });
 
-// DELETE an attachment
-router.delete(
-  '/medical-history/:medicalHistoryId/attachments/:attachmentId',
-  async (req, res, next) => {
-    try {
-      const { attachmentId } = req.params;
-      await deleteAttachment(attachmentId);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+// DELETE /api/medical-history/:medicalHistoryId/attachments/:attachmentId
+router.delete('/:attachmentId', async (req, res, next) => {
+  try {
+    const { attachmentId } = req.params;
+    await deleteAttachment(attachmentId);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

@@ -123,7 +123,7 @@ const MedicalHistoryEntryDetailContent = ({ entryId }) => {
       <p className="text-gray-700 mb-8">Detalles de la entrada del historial médico.</p>
 
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <p className="text-gray-800 font-semibold mb-2"><strong>Fecha:</strong> {formatDate(entry.date)}</p>
+        <p className="text-gray-800 font-semibold mb-2"><strong>Fecha:</strong> {formatDate(entry.entry_date)}</p>
         <p className="text-gray-800 mb-2"><strong>Información Médica:</strong> {entry.medical_inform}</p>
         {entry.treatment && <p className="text-gray-800 mb-2"><strong>Tratamiento:</strong> {entry.treatment}</p>}
         {entry.recipe && <p className="text-gray-800 mb-2"><strong>Receta:</strong> {entry.recipe}</p>}

@@ -122,7 +122,7 @@ const { id } = Astro.params;
       const dateEl = templateNode.querySelector('[data-template-date]');
 
       descriptionEl.textContent = lastEntry.medical_inform;
-      dateEl.textContent = `Fecha: ${formatDate(lastEntry.date)}`;
+      dateEl.textContent = `Fecha: ${formatDate(lastEntry.entry_date)}`;
 
       // Make the list item clickable and navigate to the detail page
       if (listItem) {
