@@ -37,7 +37,9 @@ authRouter.post('/register', async (req, res) => {
     html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
   });
 
-  res.status(201).json({ message: 'User registered. Please check your email to verify.' });
+  res.status(201).json({
+    message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
+  });
 });
 
 authRouter.get('/verify-email/:token', async (req, res) => {
@@ -50,6 +52,8 @@ authRouter.get('/verify-email/:token', async (req, res) => {
     res.redirect(`${frontendUrl}/login`);
   } catch (error) {
     res.redirect(`${frontendUrl}/email-verification-failed`);
+    // Si hay un error (token expirado, etc.), redirige a una página de error en el frontend
+    return res.redirect(`${process.env.FRONTEND_URL}/email-verification-failed`);
   }
 });
 
