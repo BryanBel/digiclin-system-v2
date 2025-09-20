@@ -77,6 +77,7 @@ authRouter.post('/login', async (req, res) => {
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
     secure: process.env.NODE_ENV === 'prod',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'prod' ? 'none' : 'lax',
   });
 
   res.status(200).json({ id: user.id, email: user.email });

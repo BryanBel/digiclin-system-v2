@@ -11,9 +11,6 @@ import attachmentsRouter from '../attachments/attachments.routes.js';
 
 const router = Router();
 
-// Anidamos el router de adjuntos para que las rutas sean /:medicalHistoryId/attachments
-router.use('/:medicalHistoryId/attachments', attachmentsRouter);
-
 // Obtener todo el historial médico
 router.get('/', async (req, res, next) => {
   try {
@@ -97,5 +94,8 @@ router.delete('/:id', async (req, res, next) => {
     next(error);
   }
 });
+
+// Anidamos el router de adjuntos. Debe ir al final para no interferir con rutas como /:id
+router.use('/:medicalHistoryId/attachments', attachmentsRouter);
 
 export default router;
