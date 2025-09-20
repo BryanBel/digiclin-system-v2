@@ -14,11 +14,11 @@ import path from 'path';
 export const createAndConfigureApp = async () => {
   const app = express();
 
-  const origin = process.env.CORS_ORIGIN
+  const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')
-    : 'http://localhost:4321';
+    : ['http://localhost:4321'];
 
-  app.use(cors({ credentials: true, origin }));
+  app.use(cors({ credentials: true, origin: allowedOrigins }));
   app.use(express.json());
   app.use(cookieParser());
 
