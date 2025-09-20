@@ -26,8 +26,8 @@ const createAllTables = async () => {
       id SERIAL PRIMARY KEY,
       entry_date TIMESTAMPTZ DEFAULT NOW(),
       medical_inform TEXT NOT NULL,
-      treatment TEXT NOT NULL,
-      recipe TEXT NOT NULL,
+      treatment TEXT,
+      recipe TEXT,
       patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
       doctor_id UUID REFERENCES users(id) ON DELETE SET NULL
     )`,
