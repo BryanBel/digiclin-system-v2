@@ -24,7 +24,7 @@ const createAllTables = async () => {
     )`,
     `CREATE TABLE medical_history (
       id SERIAL PRIMARY KEY,
-      date TIMESTAMPTZ DEFAULT NOW(),
+      entry_date TIMESTAMPTZ DEFAULT NOW(),
       medical_inform TEXT NOT NULL,
       treatment TEXT NOT NULL,
       recipe TEXT NOT NULL,

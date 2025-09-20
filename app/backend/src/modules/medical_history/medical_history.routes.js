@@ -7,8 +7,12 @@ import {
   deleteMedicalHistory,
   getMedicalHistoryByPatientId,
 } from './medical_history.repository.js';
+import attachmentsRouter from '../attachments/attachments.routes.js';
 
 const router = Router();
+
+// Anidamos el router de adjuntos para que las rutas sean /:medicalHistoryId/attachments
+router.use('/:medicalHistoryId/attachments', attachmentsRouter);
 
 // Obtener todo el historial médico
 router.get('/', async (req, res, next) => {
@@ -61,7 +65,7 @@ router.post('/', async (req, res, next) => {
       doctor_id,
       treatment: treatment || '',
       recipe: recipe || '',
-      date: entry_date, // passing the date to the repository
+      entry_date: entry_date || new Date(), // Usar la fecha provista o la actual por defecto
     };
 
     const nuevoRecord = await createMedicalHistory(newEntryData);
