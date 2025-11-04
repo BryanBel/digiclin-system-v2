@@ -1,11 +1,20 @@
-import { CalendarDaysIcon } from '@heroicons/react/24/outline';
+import React from 'react';
+import { CalendarIcon } from '@heroicons/react/24/outline';
 
-export default function AppointmentsComponent() {
-  // En un futuro, aquí iría la lógica para obtener las citas de la API y pasarlas a un componente de calendario como FullCalendar.
+const AppointmentsComponent = () => (
+  <div className="bg-white dark:bg-zoom-dark rounded-lg shadow-lg border border-zoom-gray p-8 max-w-2xl mx-auto mt-8">
+    <div className="flex items-center gap-4 mb-6">
+      <CalendarIcon className="w-8 h-8 text-zoom-blue dark:text-white" />
+      <h2 className="text-2xl font-bold text-zoom-blue dark:text-white">Tus citas médicas</h2>
+    </div>
+    {/* Aquí va la lista de citas o el formulario */}
+    {/* Ejemplo de botón HeroUI */}
+    {/* <Button color="primary">Agendar nueva cita</Button> */}
+    <div className="mt-4">
+      <p className="text-zoom-dark dark:text-zoom-gray">No tienes citas agendadas actualmente.</p>
+      <a href="/appointments" className="mt-4 inline-block bg-zoom-blue text-white px-6 py-2 rounded-lg shadow hover:bg-zoom-dark font-semibold transition">Agendar nueva cita</a>
+    </div>
+  </div>
+);
 
-  return (
-      <div className="p-10 bg-gray-100 border rounded-lg text-center text-gray-500">
-        <p>Próximamente: Aquí se integrará un calendario interactivo (ej. FullCalendar) para visualizar y gestionar las citas.</p>
-      </div>
-  );
-}
+export default AppointmentsComponent;

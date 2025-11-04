@@ -9,7 +9,9 @@
     "dev": "concurrently --names \"backend\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev node --watch -r dotenv/config index.js\"",
     "prod": "cross-env NODE_ENV=prod node -r dotenv/config index.js",
     "tables:create:prod": "cross-env NODE_ENV=prod node -r dotenv/config src/db/tables.js",
-    "tables:create:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/tables.js"
+    "tables:create:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/tables.js",
+    "seed:prod": "cross-env NODE_ENV=prod node -r dotenv/config src/db/seed.js",
+    "seed:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/seed.js"
   },
   "keywords": [],
   "author": "",
