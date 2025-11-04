@@ -1,10 +1,161 @@
 ---
-import AuthProtected from "../features/auth/AuthProtected.astro"
 import Layout from '../layouts/Layout.astro';
-import DashboardComponent from '../components/dashboard.jsx';
 ---
-<Layout title="App">
-  <AuthProtected>
-    <DashboardComponent client:load />
-  </AuthProtected>
+<Layout>
+  <section class="simple-landing">
+    <div class="simple-landing__container">
+      <img src="/background.svg" alt="DigiClin" class="simple-landing__image" />
+      <h1 class="simple-landing__title">Bienvenido a DigiClin</h1>
+      <p class="simple-landing__subtitle">Gestiona tus citas médicas y tu historial de manera simple y segura.</p>
+      <div class="simple-landing__actions">
+        <a href="/appointments" class="simple-landing__btn">Agendar cita</a>
+        <a href="/login" class="simple-landing__btn simple-landing__btn--secondary">Ingresar</a>
+      </div>
+      <button id="theme-toggle" class="simple-landing__toggle">
+        <span aria-hidden="true">🌓</span>
+        Cambiar tema
+      </button>
+
+      <script>
+        const root = document.documentElement;
+        const THEME_KEY = 'digiclin-theme';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+        const storedTheme = localStorage.getItem(THEME_KEY);
+        if (storedTheme === 'dark') {
+          root.classList.add('dark');
+        } else if (storedTheme === 'light') {
+          root.classList.remove('dark');
+        } else if (prefersDark.matches) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+
+        prefersDark.addEventListener('change', (event) => {
+          const currentTheme = localStorage.getItem(THEME_KEY);
+          if (currentTheme) {
+            return;
+          }
+          if (event.matches) {
+            root.classList.add('dark');
+          } else {
+            root.classList.remove('dark');
+          }
+        });
+
+        const toggleButton = document.getElementById('theme-toggle');
+        toggleButton?.addEventListener('click', () => {
+          const isDark = root.classList.toggle('dark');
+          localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+        });
+      </script>
+
+      <style>
+        :root {
+          --simple-bg: #f5f7fb;
+          --simple-card: #fff;
+          --simple-title: #0f172a;
+          --simple-subtitle: #5b6b84;
+          --simple-btn-bg: #1d4ed8;
+          --simple-btn-text: #fff;
+          --simple-btn-bg-secondary: #e2e8f0;
+          --simple-btn-text-secondary: #1d4ed8;
+          --simple-toggle-bg: #e2e8f0;
+          --simple-toggle-text: #1e293b;
+        }
+        .dark {
+          --simple-bg: #0b1220;
+          --simple-card: #121b2f;
+          --simple-title: #f8fafc;
+          --simple-subtitle: #a5b4cb;
+          --simple-btn-bg: #3b82f6;
+          --simple-btn-text: #fff;
+          --simple-btn-bg-secondary: #27344f;
+          --simple-btn-text-secondary: #60a5fa;
+          --simple-toggle-bg: #27344f;
+          --simple-toggle-text: #f8fafc;
+        }
+        .simple-landing {
+          min-height: calc(100vh - 4rem);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--simple-bg);
+          transition: background 0.3s;
+        }
+        .simple-landing__container {
+          background: var(--simple-card);
+          border-radius: 2rem;
+          box-shadow: 0 24px 48px -24px rgba(15,23,42,0.18);
+          padding: 3rem 2rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2rem;
+          max-width: 420px;
+          width: 100%;
+        }
+        .simple-landing__image {
+          width: 120px;
+          height: 120px;
+          object-fit: contain;
+          margin-bottom: 1rem;
+        }
+        .simple-landing__title {
+          color: var(--simple-title);
+          font-size: 2.2rem;
+          font-weight: 700;
+          text-align: center;
+        }
+        .simple-landing__subtitle {
+          color: var(--simple-subtitle);
+          font-size: 1.1rem;
+          text-align: center;
+          margin-bottom: 1rem;
+        }
+        .simple-landing__actions {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 1rem;
+        }
+        .simple-landing__btn {
+          background: var(--simple-btn-bg);
+          color: var(--simple-btn-text);
+          padding: 0.85rem 1.5rem;
+          border-radius: 1rem;
+          font-weight: 600;
+          font-size: 1rem;
+          text-decoration: none;
+          box-shadow: 0 8px 16px -8px rgba(37,99,235,0.12);
+          transition: background 0.2s;
+        }
+        .simple-landing__btn--secondary {
+          background: var(--simple-btn-bg-secondary);
+          color: var(--simple-btn-text-secondary);
+        }
+        .simple-landing__btn:hover {
+          filter: brightness(0.97);
+        }
+        .simple-landing__toggle {
+          background: var(--simple-toggle-bg);
+          color: var(--simple-toggle-text);
+          border: none;
+          border-radius: 999px;
+          padding: 0.6rem 1.2rem;
+          font-weight: 600;
+          font-size: 1rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+          transition: filter 0.2s;
+        }
+        .simple-landing__toggle:hover {
+          filter: brightness(0.95);
+        }
+      </style>
+    </div>
+  </section>
 </Layout>

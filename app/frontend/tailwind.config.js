@@ -5,7 +5,15 @@ export default {
     './src/**/*.{astro,html,js,jsx,md,mdx,svelte,vue,tsx,ts}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'zoom-blue': '#2D8CFF',
+        'zoom-dark': '#174EA6',
+        'zoom-light': '#F6F8FA',
+        'zoom-gray': '#E3E8EE',
+        'zoom-text': '#1A1A1A',
+      },
+    },
   },
   plugins: [],
 };

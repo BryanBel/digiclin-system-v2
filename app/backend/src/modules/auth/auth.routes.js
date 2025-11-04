@@ -27,7 +27,8 @@ authRouter.post('/register', async (req, res) => {
     { expiresIn: '1h' },
   );
 
-  const backendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  // Prioriza una URL pública explícita y usa CORS_ORIGIN como respaldo para entornos locales.
+  const backendUrl = process.env.BACKEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000';
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
   await nodemailerService.sendMail({
@@ -50,7 +51,7 @@ authRouter.get('/verify-email/:token', async (req, res) => {
     const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
     await usersRepository.verifyOne({ id: decodedToken.id });
     res.redirect(`${frontendUrl}/login`);
-  } catch (error) {
+  } catch {
     res.redirect(`${frontendUrl}/email-verification-failed`);
   }
 });

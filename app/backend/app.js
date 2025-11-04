@@ -10,6 +10,7 @@ import medicalHistoryRouter from './src/modules/medical_history/medical_history.
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import appointmentsRouter from './src/modules/appointments/appointments.routes.js';
 
 export const createAndConfigureApp = async () => {
   const app = express();
@@ -25,10 +26,10 @@ export const createAndConfigureApp = async () => {
   // Serve static uploaded files
   app.use('/uploads', express.static(path.join(import.meta.dirname, 'public', 'uploads')));
 
-  //se agrega /api/
   app.use('/api/auth', authRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
+  app.use('/api/appointments', appointmentsRouter);
 
   app.use((err, req, res, _next) => {
     console.log(err);
