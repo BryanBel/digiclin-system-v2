@@ -37,5 +37,3 @@ yarn-error.log*
 pnpm-debug.log*
 .idea/
 
-# Ignorar lockfiles de gestores de paquetes alternativos
-pnpm-lock.yaml
