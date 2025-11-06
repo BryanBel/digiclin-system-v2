@@ -1,0 +1,664 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import medicalHistoryClient from './medical-history.client.js?url';
+
+const user = (Astro.locals as any)?.user ?? null;
+const isDoctor = user?.role === 'doctor';
+const canEdit = isDoctor;
+---
+
+<Layout title="DigiClin | Historial médico">
+  <section class="admin-shell">
+    <header class="admin-header">
+      <h1>Historial médico</h1>
+      <p class="admin-subtitle">
+        Consulta y actualiza los registros clínicos de los pacientes.
+      </p>
+    </header>
+
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="admin-toolbar admin-toolbar--history">
+          <input
+            type="search"
+            class="admin-search"
+            placeholder="Buscar por paciente, documento o doctor"
+            data-history-search
+          />
+          <button
+            type="button"
+            class="admin-button admin-button--primary"
+            data-open-history-create
+            hidden={!canEdit}
+          >
+            Registrar historial
+          </button>
+        </div>
+
+        <div class="admin-table-wrapper">
+          <table class="admin-table admin-table--history">
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Fecha</th>
+                <th>Motivo / Diagnóstico</th>
+                <th>Tratamiento</th>
+                <th>Receta</th>
+                <th>Doctor</th>
+              </tr>
+            </thead>
+            <tbody data-history-body>
+              <tr class="admin-empty">
+                <td colspan="6">Cargando historial clínico...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-modal" data-history-modal hidden data-can-edit={canEdit}>
+      <div class="admin-modal__backdrop" data-close-history-panel></div>
+
+      <aside
+        class="admin-modal__content admin-panel admin-panel--history"
+        data-history-panel
+        hidden
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-modal-title"
+        tabindex="-1"
+        data-can-edit={canEdit}
+      >
+        <h2 id="history-modal-title" data-history-panel-title>Historial clínico</h2>
+        <p class="admin-panel__description" data-history-panel-description>
+          Selecciona un registro para consultarlo o registra nuevos antecedentes desde el listado.
+        </p>
+        <p class="admin-panel__notice" data-history-readonly hidden>
+          Este registro forma parte del expediente clínico y no se puede modificar. Usa “Registrar
+          historial” para añadir nueva información sobre el paciente.
+        </p>
+
+        <div class="admin-panel__meta">
+          <dl class="admin-panel__meta-row">
+            <div>
+              <dt>Paciente</dt>
+              <dd data-history-meta-patient>-</dd>
+            </div>
+            <div>
+              <dt>Documento</dt>
+              <dd data-history-meta-document>-</dd>
+            </div>
+            <div>
+              <dt>Doctor responsable</dt>
+              <dd data-history-meta-doctor>-</dd>
+            </div>
+            <div>
+              <dt>Fecha del registro</dt>
+              <dd data-history-meta-entry>-</dd>
+            </div>
+          </dl>
+
+          <dl class="admin-panel__meta-row">
+            <div>
+              <dt>Correo del paciente</dt>
+              <dd data-history-meta-email>-</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd data-history-meta-phone>-</dd>
+            </div>
+          </dl>
+        </div>
+
+        <section class="history-timeline" data-history-timeline hidden>
+          <header class="history-timeline__header">
+            <h3>Registros del paciente</h3>
+            <span class="history-timeline__count" data-history-timeline-count>-</span>
+          </header>
+          <ol class="history-timeline__list" data-history-timeline-list></ol>
+        </section>
+
+  <form id="history-form" class="admin-form" novalidate data-can-edit={canEdit}>
+          <div class="admin-panel__fields" data-history-patient-field>
+            <label class="admin-field">
+              <span>Paciente</span>
+              <select name="patientId" data-history-patient-select required>
+                <option value="">Selecciona un paciente</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="admin-field">
+            <span>Fecha del registro</span>
+            <input type="datetime-local" name="entryDate" data-history-entry-date />
+          </label>
+
+          <label class="admin-field">
+            <span>Motivo o diagnóstico</span>
+            <textarea name="medicalInform" rows="4" data-history-medical-inform required></textarea>
+          </label>
+
+          <label class="admin-field">
+            <span>Tratamiento</span>
+            <textarea name="treatment" rows="3" data-history-treatment></textarea>
+          </label>
+
+          <label class="admin-field">
+            <span>Receta</span>
+            <textarea name="recipe" rows="3" data-history-recipe></textarea>
+          </label>
+
+          <p id="history-feedback" class="admin-feedback" role="status"></p>
+
+          <div class="admin-actions" data-history-actions>
+            <button
+              type="submit"
+              class="admin-button admin-button--primary"
+              data-history-submit
+              hidden={!canEdit}
+            >
+              Guardar registro
+            </button>
+            <button type="button" class="admin-button admin-button--ghost" data-close-history-panel>
+              {canEdit ? 'Cancelar' : 'Cerrar'}
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .admin-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+
+  .admin-shell--panel-open {
+    background: var(--color-admin-surface-alt, var(--hero-bg));
+  }
+
+  .admin-header {
+    display: grid;
+    gap: 0.6rem;
+    text-align: center;
+  }
+
+  .admin-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  .admin-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1.05rem;
+  }
+
+  .admin-grid {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  @media (min-width: 960px) {
+    .admin-grid--with-panel {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 1.75rem;
+    }
+  }
+
+  .admin-card,
+  .admin-panel {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+  }
+
+  .admin-panel {
+    min-height: 100%;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 1rem;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-admin-border);
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--color-admin-row-hover);
+  }
+
+  .admin-table th {
+    font-weight: 600;
+    color: var(--color-admin-table-header);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  :global(.admin-empty td) {
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .admin-panel__description {
+    margin: 0.5rem 0 1.25rem;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .admin-panel__notice {
+    margin: 0 0 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    background: rgba(37, 99, 235, 0.12);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .admin-toolbar--history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .admin-toolbar--history .admin-search {
+    flex: 1 1 320px;
+  }
+
+  .admin-toolbar--history .admin-button {
+    flex: 0 0 auto;
+  }
+
+  .admin-table--history th,
+  .admin-table--history td {
+    text-align: center;
+    vertical-align: top;
+  }
+
+  .admin-table--history tbody tr {
+    cursor: pointer;
+  }
+
+  .admin-table--history tbody tr.admin-history-row {
+    position: relative;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.1));
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+
+  .admin-table--history tbody tr.admin-history-row:nth-child(even) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.14));
+  }
+
+  .admin-table--history tbody tr.admin-history-row:hover,
+  .admin-table--history tbody tr.admin-history-row:focus-within {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.28));
+    box-shadow: 0 18px 38px -18px rgba(37, 99, 235, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .admin-history-summary {
+    display: grid;
+    gap: 0.4rem;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .admin-history-summary strong {
+    font-size: 1rem;
+  }
+
+  .admin-history-meta {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .admin-history-text {
+    max-height: 4.75rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    text-align: left;
+    white-space: pre-line;
+  }
+
+  .admin-panel--history {
+    display: grid;
+    gap: 1.5rem;
+    justify-items: stretch;
+    align-content: start;
+  }
+
+  .admin-panel--history select,
+  .admin-panel--history textarea {
+    width: 100%;
+  }
+
+  .admin-panel--history textarea {
+    min-height: 7rem;
+  }
+
+  .admin-panel--history .admin-panel__meta {
+    background: var(--color-admin-row-hover);
+    border-radius: 0.85rem;
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .admin-panel--history .admin-panel__meta-row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    justify-items: center;
+  }
+
+  .admin-panel--history .admin-panel__meta-row > div {
+    display: grid;
+    gap: 0.35rem;
+    text-align: center;
+  }
+
+  .admin-panel--history .admin-panel__meta-row dt {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .admin-panel--history .admin-panel__meta-row dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .history-timeline {
+    display: grid;
+    gap: 1rem;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 0.9rem;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .history-timeline__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .history-timeline__header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .history-timeline__count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+
+  .history-timeline__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .history-timeline__item {
+    display: grid;
+    gap: 0.6rem;
+    background: var(--color-admin-surface);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 0.85rem;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 12px 22px -18px rgba(37, 99, 235, 0.35);
+  }
+
+  .history-timeline__item-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .history-timeline__item-header strong {
+    font-size: 0.95rem;
+  }
+
+  .history-timeline__item-body {
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .history-timeline__item-body span {
+    display: block;
+    white-space: pre-line;
+  }
+
+  .admin-form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .admin-field {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .admin-field input,
+  .admin-field textarea,
+  .admin-field select {
+    border: 1px solid var(--color-admin-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-card-bg);
+    font: inherit;
+    color: inherit;
+  }
+
+  .admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  :global(.admin-button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.4rem;
+    min-height: 2.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  :global(.admin-button--primary) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 18px 30px -16px rgba(37, 99, 235, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  :global(.admin-button--ghost) {
+    background: transparent;
+    border: 1px solid var(--color-admin-border);
+    color: inherit;
+  }
+
+  :global(.admin-button--primary:disabled) {
+    opacity: 0.7;
+    cursor: wait;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  :global(.admin-button:not(:disabled):hover),
+  :global(.admin-button:not(:disabled):focus-visible) {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 30px -18px rgba(37, 99, 235, 0.45);
+  }
+
+  .admin-feedback {
+    min-height: 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-feedback--success {
+    color: #0f766e;
+  }
+
+  .admin-feedback--error {
+    color: #dc2626;
+  }
+
+  :global(.admin-cell) {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  :global(.admin-cell--person) {
+    justify-items: start;
+    text-align: left;
+    gap: 0.5rem;
+  }
+
+  :global(.admin-cell--person .admin-history-meta) {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .admin-table--history tbody tr.admin-history-row:hover .admin-row-hint,
+  .admin-table--history tbody tr.admin-history-row:focus-within .admin-row-hint {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.65), rgba(37, 99, 235, 0.45));
+  }
+
+  :global(.admin-row-hint) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.16);
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+
+  :global(.admin-row-hint)::after {
+    content: '↗';
+    font-size: 0.85rem;
+  }
+
+  .admin-panel--history[data-mode="create"] [data-history-panel-title]::after {
+    content: ' (nuevo)';
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-left: 0.25rem;
+  }
+
+  .admin-modal {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(1.5rem, 5vw, 3rem);
+    z-index: 1000;
+    isolation: isolate;
+  }
+
+  .admin-modal[hidden] {
+    display: none;
+  }
+
+  .admin-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(8px);
+  }
+
+  .admin-modal__content {
+    position: relative;
+    width: min(960px, 100%);
+    max-height: min(90vh, 960px);
+    overflow-y: auto;
+  }
+
+  .admin-modal__content:focus {
+    outline: none;
+  }
+
+  @media (max-width: 640px) {
+    .admin-toolbar--history {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-toolbar--history .admin-button {
+      width: 100%;
+    }
+
+    .admin-modal {
+      padding: 0;
+    }
+
+    .admin-modal__content {
+      width: 100%;
+      max-height: 100vh;
+      border-radius: 0;
+      padding: clamp(1.5rem, 6vw, 2rem);
+    }
+  }
+</style>
+
+<script type="module" src={medicalHistoryClient}></script>

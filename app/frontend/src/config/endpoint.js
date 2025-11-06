@@ -1,1 +1,4 @@
-export const BACK_ENDPOINT = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
+const DEFAULT_DEV_ENDPOINT = 'http://localhost:3000';
+
+export const BACK_ENDPOINT =
+	import.meta.env.PUBLIC_BACKEND_URL ?? (import.meta.env.DEV ? DEFAULT_DEV_ENDPOINT : '');

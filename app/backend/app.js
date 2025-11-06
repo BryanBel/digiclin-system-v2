@@ -11,6 +11,8 @@ import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import appointmentsRouter from './src/modules/appointments/appointments.routes.js';
+import usersRepository from './src/modules/users/users.repository.js';
+import appointmentRequestsRouter from './src/modules/appointment_requests/appointment_requests.routes.js';
 
 export const createAndConfigureApp = async () => {
   const app = express();
@@ -23,10 +25,28 @@ export const createAndConfigureApp = async () => {
   app.use(express.json());
   app.use(cookieParser());
 
+  app.use(async (req, res, next) => {
+    res.locals.user = null;
+
+    const accessToken = req.cookies.access_token;
+    if (!accessToken) return next();
+
+    try {
+      const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+      const user = await usersRepository.findByEmail({ email: decodedToken.email });
+      if (user) res.locals.user = user;
+    } catch (error) {
+      console.warn('SSR auth check failed:', error.message);
+    }
+
+    next();
+  });
+
   // Serve static uploaded files
   app.use('/uploads', express.static(path.join(import.meta.dirname, 'public', 'uploads')));
 
   app.use('/api/auth', authRouter);
+  app.use('/api/appointment-requests', appointmentRequestsRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
   app.use('/api/appointments', appointmentsRouter);
@@ -66,7 +86,9 @@ export const createAndConfigureApp = async () => {
     const path = await import('path');
     const { handler: ssrHandler } = await import('./dist/server/entry.mjs');
     app.use(express.static(path.join(import.meta.dirname, 'dist', 'client')));
-    app.use(ssrHandler);
+    app.use((req, res, next) => {
+      return ssrHandler(req, res, next);
+    });
   }
 
   return app;

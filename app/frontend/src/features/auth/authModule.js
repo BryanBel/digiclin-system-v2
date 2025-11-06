@@ -13,9 +13,9 @@ const login = async ({email, password}) => {
   user.set(userData);
 }
 
-const register = async ({email, password}) => {
+const register = async ({ email, password, fullName, role }) => {
   const response = await ky.post(`${BACK_ENDPOINT}/api/auth/register`, {
-    json: {email, password},
+    json: { email, password, fullName, role },
     credentials: 'include'
   });
   // Cuando se registra el backend envia un mensaje

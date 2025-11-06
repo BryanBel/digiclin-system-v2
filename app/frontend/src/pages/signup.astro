@@ -4,10 +4,17 @@ import SignupForm from "../features/users/SignupForm.astro";
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="Sign Up">
+<Layout title="DigiClin | Regístrate">
   <AuthUnprotected>
-    <main class="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <SignupForm />
-    </main>
+    <section class="auth-shell">
+      <article class="auth-card auth-card--signup">
+        <div class="auth-content signup-panel">
+          <SignupForm />
+        </div>
+        <figure class="signup-illustration" aria-hidden="true">
+          <img src="/asian-medic.png" alt="" class="signup-illustration__image" />
+        </figure>
+      </article>
+    </section>
   </AuthUnprotected>
 </Layout>
