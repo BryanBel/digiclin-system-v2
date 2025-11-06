@@ -13,13 +13,21 @@ import nodemailerService from '../../services/nodemailer.js';
 const authRouter = express.Router();
 
 authRouter.post('/register', async (req, res) => {
-  const { email, password } = registerUserRouteSchema.body.parse(req.body);
+  const { email, password, fullName, role } = registerUserRouteSchema.body.parse(req.body);
+
+  const normalizedFullName = fullName?.trim() || null;
+  const normalizedRole = role ?? 'doctor';
 
   const userExists = await usersRepository.findByEmail({ email });
   if (userExists) throw new ErrorWithStatus(400, 'User already exists');
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const newUser = await usersRepository.addOne({ email, passwordHash });
+  const newUser = await usersRepository.addOne({
+    email,
+    passwordHash,
+    fullName: normalizedFullName,
+    role: normalizedRole,
+  });
 
   const verificationToken = jwt.sign(
     { id: newUser.id, email: newUser.email },
@@ -67,7 +75,6 @@ authRouter.post('/login', async (req, res) => {
       403,
       'Por favor, verifica tu correo electrónico antes de iniciar sesión.',
     );
-  console.log(user.verify_email);
   const accessToken = jwt.sign(
     { id: user.id, email: user.email },
     process.env.ACCESS_TOKEN_SECRET,
@@ -81,7 +88,7 @@ authRouter.post('/login', async (req, res) => {
     sameSite: process.env.NODE_ENV === 'prod' ? 'none' : 'lax',
   });
 
-  res.status(200).json({ id: user.id, email: user.email });
+  res.status(200).json({ id: user.id, email: user.email, role: user.role });
 });
 
 authRouter.get('/user', authenticateUser, async (req, res) => {
@@ -90,6 +97,7 @@ authRouter.get('/user', authenticateUser, async (req, res) => {
   const loggedUser = {
     id: user.id,
     email: user.email,
+    role: user.role,
   };
 
   return res.status(200).json(loggedUser);

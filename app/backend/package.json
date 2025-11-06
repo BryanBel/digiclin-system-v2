@@ -23,8 +23,6 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "@heroicons/react": "^2.2.0",
-    "@heroui/react": "^2.8.4",
     "jsonwebtoken": "^9.0.2",
     "ky": "^1.10.0",
     "multer": "^2.0.2",

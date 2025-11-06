@@ -1,0 +1,380 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import appointmentRequestsClient from './appointment-requests.client.js?url';
+---
+<Layout title="DigiClin | Solicitudes de cita">
+  <section class="admin-shell">
+    <header class="admin-header">
+      <h1>Solicitudes de cita</h1>
+      <p class="admin-subtitle">
+        Revisa las solicitudes pendientes y gestiona su estado.
+      </p>
+    </header>
+
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Contacto</th>
+                <th>Síntomas</th>
+                <th>Preferencias</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody data-requests-body>
+              <tr class="admin-empty">
+                <td colspan="6">Cargando solicitudes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="admin-panel" data-action-panel hidden>
+        <h2 data-action-title>Acción con solicitud</h2>
+        <p class="admin-panel__description" data-action-description></p>
+
+        <dl class="admin-panel__meta">
+          <div>
+            <dt>Nombre</dt>
+            <dd data-action-name>-</dd>
+          </div>
+          <div>
+            <dt>Correo</dt>
+            <dd data-action-email>-</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd data-action-phone>-</dd>
+          </div>
+          <div>
+            <dt>Documento</dt>
+            <dd data-action-document>-</dd>
+          </div>
+          <div>
+            <dt>Fecha de nacimiento</dt>
+            <dd data-action-birth>-</dd>
+          </div>
+          <div>
+            <dt>Edad</dt>
+            <dd data-action-age>-</dd>
+          </div>
+          <div>
+            <dt>Género</dt>
+            <dd data-action-gender>-</dd>
+          </div>
+        </dl>
+
+        <form id="action-form" class="admin-form" novalidate>
+          <div class="admin-panel__fields" data-field-doctor hidden>
+            <label class="admin-field">
+              <span>Correo del doctor asignado</span>
+              <input type="email" name="doctorEmail" placeholder="doctor@digiclin.test" />
+            </label>
+          </div>
+
+          <div class="admin-panel__fields" data-field-schedule hidden>
+            <label class="admin-field">
+              <span>Fecha y hora de la cita</span>
+              <input type="datetime-local" name="scheduledFor" />
+            </label>
+          </div>
+
+          <label class="admin-field">
+            <span>Nota administrativa</span>
+            <textarea
+              name="adminNote"
+              rows="3"
+              placeholder="Describe la acción que tomas o el motivo"
+            ></textarea>
+          </label>
+
+          <p id="action-feedback" class="admin-feedback" role="status"></p>
+
+          <div class="admin-actions">
+            <button
+              type="submit"
+              class="admin-button admin-button--primary"
+              data-action-submit
+            >
+              Guardar cambios
+            </button>
+            <button type="button" class="admin-button admin-button--ghost" data-cancel-action>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .admin-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+
+  .admin-header {
+    display: grid;
+    gap: 0.6rem;
+    text-align: center;
+  }
+
+  .admin-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  .admin-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1.05rem;
+  }
+
+  .admin-grid {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  @media (min-width: 960px) {
+    .admin-grid--with-panel {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 1.75rem;
+    }
+  }
+
+  .admin-card,
+  .admin-panel {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 1rem;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-admin-border);
+    vertical-align: top;
+  }
+
+  .admin-table th {
+    font-weight: 600;
+    color: var(--color-admin-table-header);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  .admin-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--color-admin-row-hover);
+  }
+
+  :global(.admin-empty td) {
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  :global(.admin-status) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: rgba(148, 163, 184, 0.16);
+    color: #475569;
+  }
+
+  :global(.admin-status--pending) {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+
+  :global(.admin-status--confirmed) {
+    background: rgba(14, 159, 110, 0.16);
+    color: #047857;
+  }
+
+  :global(.admin-status--rejected) {
+    background: rgba(220, 38, 38, 0.18);
+    color: #b91c1c;
+  }
+
+  :global(.admin-status--reschedule) {
+    background: rgba(234, 179, 8, 0.18);
+    color: #b45309;
+  }
+
+  .admin-panel__description {
+    margin: 0.5rem 0 1rem;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .admin-panel__meta {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+    background: var(--color-admin-row-hover);
+    border-radius: 0.85rem;
+    padding: 1rem;
+  }
+
+  .admin-panel__meta dt {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .admin-panel__meta dd {
+    margin: 0.25rem 0 0;
+    font-weight: 600;
+  }
+
+  :global(.admin-patient-meta) {
+    margin-top: 0.35rem;
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .admin-form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .admin-field {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .admin-field input,
+  .admin-field textarea {
+    border: 1px solid var(--color-admin-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-card-bg);
+    font: inherit;
+    color: inherit;
+  }
+
+  .admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  :global(.admin-row__actions) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  :global(.admin-button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.4rem;
+    min-height: 2.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  :global(.admin-button--primary) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 18px 30px -16px rgba(37, 99, 235, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  :global(.admin-button--secondary) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.08));
+    color: #1d4ed8;
+    box-shadow: 0 12px 26px -18px rgba(37, 99, 235, 0.45);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+  }
+
+  :global(.admin-button--danger) {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.22), rgba(220, 38, 38, 0.1));
+    color: #b91c1c;
+    box-shadow: 0 12px 26px -18px rgba(220, 38, 38, 0.45);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+  }
+
+  :global(.admin-button--ghost) {
+    background: transparent;
+    border: 1px solid var(--color-admin-border);
+    color: inherit;
+  }
+
+  :global(.admin-button--primary:disabled) {
+    opacity: 0.7;
+    cursor: wait;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  :global(.admin-button:not(:disabled):hover),
+  :global(.admin-button:not(:disabled):focus-visible) {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 30px -18px rgba(37, 99, 235, 0.45);
+  }
+
+  .admin-feedback {
+    min-height: 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-feedback--success {
+    color: #0f766e;
+  }
+
+  .admin-feedback--error {
+    color: #dc2626;
+  }
+</style>
+
+<script type="module" src={appointmentRequestsClient}></script>

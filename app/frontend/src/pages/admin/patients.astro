@@ -1,0 +1,505 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import patientsClient from './patients.client.js?url';
+---
+
+<Layout title="DigiClin | Pacientes">
+  <section class="admin-shell">
+    <header class="admin-header">
+      <h1>Pacientes</h1>
+      <p class="admin-subtitle">
+        Consulta el registro de pacientes y actualiza sus datos básicos.
+      </p>
+    </header>
+
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="admin-toolbar">
+          <input
+            type="search"
+            class="admin-search"
+            placeholder="Buscar por nombre, documento o correo"
+            data-patient-search
+          />
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Documento</th>
+                <th>Contacto</th>
+                <th>Edad</th>
+                <th>Última cita</th>
+                <th>Citas</th>
+              </tr>
+            </thead>
+            <tbody data-patients-body>
+              <tr class="admin-empty">
+                <td colspan="6">Cargando pacientes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="admin-panel" data-patient-panel hidden>
+        <h2>Ficha del paciente</h2>
+        <p class="admin-panel__description" data-panel-description>
+          Selecciona un paciente para ver o editar sus datos.
+        </p>
+
+        <div class="admin-panel__meta">
+          <dl class="admin-panel__meta-row">
+            <div>
+              <dt>Nombre</dt>
+              <dd data-panel-name>-</dd>
+            </div>
+            <div>
+              <dt>Documento</dt>
+              <dd data-panel-document>-</dd>
+            </div>
+            <div>
+              <dt>Edad</dt>
+              <dd data-panel-age>-</dd>
+            </div>
+            <div>
+              <dt>Género</dt>
+              <dd data-panel-gender>-</dd>
+            </div>
+          </dl>
+
+          <dl class="admin-panel__meta-row">
+            <div>
+              <dt>Citas registradas</dt>
+              <dd data-panel-appointments>-</dd>
+            </div>
+            <div>
+              <dt>Última cita</dt>
+              <dd data-panel-last-appointment>-</dd>
+            </div>
+          </dl>
+        </div>
+
+        <form id="patient-form" class="admin-form" novalidate>
+          <div class="admin-panel__fields">
+            <label class="admin-field">
+              <span>Nombre completo</span>
+              <input type="text" name="fullName" required />
+            </label>
+          </div>
+
+          <div class="admin-panel__fields">
+            <label class="admin-field">
+              <span>Documento</span>
+              <input type="text" name="documentId" required />
+            </label>
+            <label class="admin-field">
+              <span>Fecha de nacimiento</span>
+              <input type="date" name="birthDate" />
+            </label>
+          </div>
+
+          <div class="admin-panel__fields">
+            <label class="admin-field">
+              <span>Género</span>
+              <select name="gender">
+                <option value="">Sin especificar</option>
+                <option value="female">Femenino</option>
+                <option value="male">Masculino</option>
+              </select>
+            </label>
+            <label class="admin-field">
+              <span>Teléfono</span>
+              <input type="tel" name="phone" />
+            </label>
+          </div>
+
+          <label class="admin-field">
+            <span>Correo electrónico</span>
+            <input type="email" name="email" />
+          </label>
+
+          <p id="patient-feedback" class="admin-feedback" role="status"></p>
+
+          <div class="admin-actions">
+            <button type="submit" class="admin-button admin-button--primary" data-patient-submit>
+              Guardar cambios
+            </button>
+            <button type="button" class="admin-button admin-button--ghost" data-close-patient-panel>
+              Cerrar
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .admin-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+    transition: max-width 0.24s ease;
+  }
+
+  .admin-shell--panel-open {
+    max-width: 88rem;
+  }
+
+  .admin-header {
+    display: grid;
+    gap: 0.6rem;
+    text-align: center;
+  }
+
+  .admin-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  .admin-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1.05rem;
+  }
+
+  .admin-grid {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  @media (min-width: 960px) {
+    .admin-grid--with-panel {
+      grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+      align-items: start;
+      gap: 1.75rem;
+    }
+
+    .admin-shell--panel-open .admin-grid--with-panel {
+      grid-template-columns: minmax(0, 1.95fr) minmax(320px, 1fr);
+    }
+
+    .admin-shell--panel-open .admin-panel {
+      min-width: clamp(320px, 28vw, 360px);
+    }
+  }
+
+  .admin-card,
+  .admin-panel {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+    min-width: 0;
+  }
+
+  .admin-card {
+    display: grid;
+    gap: 1.25rem;
+    justify-items: stretch;
+  }
+
+  .admin-panel {
+    display: grid;
+    gap: 1.5rem;
+    text-align: center;
+    justify-items: stretch;
+    align-content: start;
+  }
+
+  .admin-toolbar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .admin-search {
+    width: min(320px, 100%);
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-admin-border);
+    padding: 0.65rem 1rem;
+    font: inherit;
+    background: var(--color-card-bg);
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 1rem;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.85rem 1.1rem;
+    text-align: center;
+    border-bottom: none;
+    vertical-align: top;
+    cursor: pointer;
+  }
+
+  .admin-table tbody tr {
+    cursor: pointer;
+  }
+
+  .admin-table td > strong {
+    display: block;
+    text-align: center;
+  }
+
+  .admin-table td > div {
+    text-align: center;
+  }
+
+  .admin-table tbody tr.admin-patient-row {
+    position: relative;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(37, 99, 235, 0.08));
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+
+  .admin-table tbody tr.admin-patient-row:nth-child(even) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(37, 99, 235, 0.1));
+  }
+
+  .admin-table tbody tr.admin-patient-row::after {
+    content: '';
+    position: absolute;
+    left: 1.1rem;
+    right: 1.1rem;
+    bottom: 0;
+    height: 1px;
+    background: rgba(148, 163, 184, 0.35);
+    pointer-events: none;
+  }
+
+  .admin-table tbody tr.admin-patient-row:last-child::after {
+    display: none;
+  }
+
+  .admin-table tbody tr.admin-patient-row:hover,
+  .admin-table tbody tr.admin-patient-row:focus-within {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.24));
+    box-shadow: 0 18px 36px -18px rgba(37, 99, 235, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .admin-table tbody tr.admin-patient-row:hover .admin-row-hint,
+  .admin-table tbody tr.admin-patient-row:focus-within .admin-row-hint {
+    color: #fff;
+  }
+
+  .admin-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  :global(.admin-empty td) {
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  :global(.admin-patient-meta) {
+    margin-top: 0.35rem;
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    text-align: center;
+    justify-items: center;
+  }
+
+  :global(.admin-row-hint) {
+    margin: 0.6rem auto 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.16);
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+
+  :global(.admin-row-hint)::after {
+    content: '↗';
+    font-size: 0.85rem;
+  }
+
+  .admin-panel__description {
+    margin: 0.5rem 0 1rem;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .admin-panel__meta {
+    display: grid;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    background: var(--color-admin-row-hover);
+    border-radius: 0.85rem;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .admin-panel__meta-row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    justify-items: center;
+  }
+
+  .admin-panel__meta-row > div {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .admin-panel__meta dt {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .admin-panel__meta dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .admin-form {
+    width: 100%;
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+  }
+
+  .admin-panel__fields {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .admin-field {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .admin-field input,
+  .admin-field select {
+    border: 1px solid var(--color-admin-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-card-bg);
+    font: inherit;
+    color: inherit;
+    width: 100%;
+  }
+
+  .admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    width: 100%;
+  }
+
+  :global(.admin-cell) {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  :global(.admin-cell--person) {
+    gap: 0.45rem;
+    justify-items: start;
+    text-align: left;
+  }
+
+  :global(.admin-cell--person .admin-row-hint) {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  :global(.admin-cell--stack) {
+    gap: 0.2rem;
+  }
+
+  :global(.admin-button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.4rem;
+    min-height: 2.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  :global(.admin-button--primary) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 18px 30px -16px rgba(37, 99, 235, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  :global(.admin-button--ghost) {
+    background: transparent;
+    border: 1px solid var(--color-admin-border);
+    color: inherit;
+  }
+
+  :global(.admin-button--primary:disabled) {
+    opacity: 0.7;
+    cursor: wait;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  :global(.admin-button:not(:disabled):hover),
+  :global(.admin-button:not(:disabled):focus-visible) {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 30px -18px rgba(37, 99, 235, 0.45);
+  }
+
+  .admin-feedback {
+    min-height: 1.25rem;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .admin-feedback--success {
+    color: #0f766e;
+  }
+
+  .admin-feedback--error {
+    color: #dc2626;
+  }
+</style>
+
+<script type="module" src={patientsClient}></script>

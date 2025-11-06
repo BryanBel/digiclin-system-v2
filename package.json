@@ -17,8 +17,6 @@
     "concurrently": "^9.2.1"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "@heroui/react": "^2.8.4",
     "ky": "^1.10.0",
     "nanostores": "^1.0.1"
   }

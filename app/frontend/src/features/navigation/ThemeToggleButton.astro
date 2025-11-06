@@ -1,0 +1,75 @@
+---
+const ELEMENT_ID = 'theme-toggle';
+const THEME_KEY = 'theme';
+---
+
+<button
+  id={ELEMENT_ID}
+  class="theme-toggle"
+  type="button"
+  aria-label="Cambiar tema"
+  aria-pressed="false"
+  data-theme-toggle
+>
+  <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀️</span>
+  <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">🌙</span>
+</button>
+
+<script>
+  const THEME_KEY = 'theme';
+
+  const applyTheme = (isDark) => {
+    document.documentElement.classList.toggle('dark', isDark);
+    const button = document.querySelector('[data-theme-toggle]');
+    if (button) {
+      button.setAttribute('aria-pressed', String(isDark));
+    }
+  };
+
+  const resolveInitialTheme = () => {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'dark') return true;
+    if (stored === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  };
+
+  const handlePreferenceChange = (event) => {
+    if (localStorage.getItem(THEME_KEY)) return;
+    applyTheme(event.matches);
+  };
+
+  const registerToggle = () => {
+    const button = document.querySelector('[data-theme-toggle]');
+    if (!button) return;
+
+    let isDark = resolveInitialTheme();
+    applyTheme(isDark);
+
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    prefersDark.addEventListener('change', handlePreferenceChange);
+
+    button.addEventListener('click', () => {
+      isDark = !isDark;
+      applyTheme(isDark);
+      localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+    });
+
+    window.addEventListener(
+      'beforeunload',
+      () => {
+        prefersDark.removeEventListener('change', handlePreferenceChange);
+      },
+      { once: true },
+    );
+  };
+
+  const init = () => {
+    registerToggle();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+</script>

@@ -1,0 +1,502 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import doctorDashboardClient from './doctor-dashboard.client.js?url';
+
+const user = (Astro.locals as any)?.user ?? null;
+const isDoctor = user?.role === 'doctor';
+---
+
+<Layout title="DigiClin | Mis citas">
+  <section class="admin-shell">
+    <header class="admin-header">
+      <h1>Mis citas</h1>
+      <p class="admin-subtitle">
+        Revisa tus próximas consultas y registra el seguimiento clínico de tus pacientes.
+      </p>
+    </header>
+
+    {isDoctor ? (
+      <>
+        <div class="admin-card doctor-quick">
+          <header class="doctor-quick__header">
+            <div>
+              <h2>Agendar cita rápida</h2>
+              <p>
+                Registra una consulta directamente en tu agenda. Al crearla quedará confirmada y
+                aparecerá en tus próximas citas.
+              </p>
+            </div>
+          </header>
+          <form id="doctor-quick-form" class="doctor-quick__form">
+            <div class="doctor-quick__grid">
+              <label class="doctor-quick__field">
+                <span>Nombre completo del paciente</span>
+                <input
+                  type="text"
+                  name="fullName"
+                  placeholder="Ej. María González"
+                  required
+                />
+              </label>
+              <label class="doctor-quick__field">
+                <span>Documento (opcional)</span>
+                <input type="text" name="documentId" placeholder="V-00000000" />
+              </label>
+            </div>
+
+            <div class="doctor-quick__grid">
+              <label class="doctor-quick__field">
+                <span>Correo electrónico (opcional)</span>
+                <input type="email" name="email" placeholder="paciente@correo.com" />
+              </label>
+              <label class="doctor-quick__field">
+                <span>Teléfono (opcional)</span>
+                <input type="tel" name="phone" placeholder="555-000-0000" />
+              </label>
+            </div>
+
+            <label class="doctor-quick__field">
+              <span>Fecha y hora de la consulta</span>
+              <input type="datetime-local" name="scheduledFor" required />
+            </label>
+
+            <label class="doctor-quick__field">
+              <span>Motivo o síntoma principal</span>
+              <input
+                type="text"
+                name="reason"
+                placeholder="Ej. Control general, seguimiento, etc."
+                required
+              />
+            </label>
+
+            <label class="doctor-quick__field">
+              <span>Notas adicionales (opcional)</span>
+              <textarea
+                name="additionalNotes"
+                placeholder="Anota indicaciones internas o contexto previo"
+                rows="3"
+              ></textarea>
+            </label>
+
+            <p class="doctor-quick__feedback" data-quick-feedback role="status"></p>
+
+            <div class="doctor-quick__actions">
+              <button type="submit" class="admin-button admin-button--primary" data-quick-submit>
+                Agendar ahora
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-toolbar admin-toolbar--doctor">
+          <label class="admin-filter">
+            <span>Filtrar por estado</span>
+            <select data-doctor-status-filter>
+              <option value="all">Todas</option>
+              <option value="confirmed">Planificadas</option>
+              <option value="completed">Finalizadas</option>
+              <option value="pending">Pendientes</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+          </label>
+
+          <button type="button" class="admin-button admin-button--ghost" data-doctor-refresh>
+            Actualizar lista
+          </button>
+        </div>
+
+        <div class="admin-grid doctor-grid">
+          <div class="admin-card doctor-card">
+            <header class="doctor-card__header">
+              <div>
+                <h2>Próximas citas</h2>
+                <p class="doctor-card__subtitle" data-doctor-upcoming-summary>
+                  Preparando datos...
+                </p>
+              </div>
+            </header>
+
+            <div class="admin-table-wrapper">
+              <table class="admin-table admin-table--doctor">
+                <thead>
+                  <tr>
+                    <th>Paciente</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody data-doctor-upcoming-body>
+                  <tr class="admin-empty">
+                    <td colspan="5">Cargando citas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-card doctor-card">
+            <header class="doctor-card__header">
+              <div>
+                <h2>Citas recientes</h2>
+                <p class="doctor-card__subtitle" data-doctor-history-summary>
+                  Preparando datos...
+                </p>
+              </div>
+            </header>
+
+            <div class="admin-table-wrapper">
+              <table class="admin-table admin-table--doctor">
+                <thead>
+                  <tr>
+                    <th>Paciente</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Estado</th>
+                    <th>Historial</th>
+                  </tr>
+                </thead>
+                <tbody data-doctor-history-body>
+                  <tr class="admin-empty">
+                    <td colspan="5">Cargando historial...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <p class="doctor-feedback" data-doctor-feedback hidden></p>
+      </>
+    ) : (
+      <div class="admin-card admin-card--restricted">
+        <h2>Acceso restringido</h2>
+        <p>Esta página está disponible únicamente para doctores.</p>
+      </div>
+    )}
+  </section>
+</Layout>
+
+{isDoctor ? <script type="module" src={doctorDashboardClient}></script> : null}
+
+<style>
+  .admin-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+
+  .admin-header {
+    display: grid;
+    gap: 0.6rem;
+    text-align: center;
+  }
+
+  .admin-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  .admin-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1.05rem;
+  }
+
+  .admin-toolbar--doctor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .admin-filter {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .admin-filter select {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-admin-border);
+    padding: 0.6rem 0.85rem;
+    background: var(--color-card-bg);
+    color: inherit;
+    font: inherit;
+    min-width: 200px;
+  }
+
+  .doctor-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: clamp(1.25rem, 3vw, 1.75rem);
+  }
+
+  .admin-grid {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  .admin-card {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+  }
+
+  .doctor-quick {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .doctor-quick__header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .doctor-quick__header p {
+    margin: 0.4rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .doctor-quick__form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .doctor-quick__grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .doctor-quick__field {
+    display: grid;
+    gap: 0.45rem;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-quick__field input,
+  .doctor-quick__field textarea {
+    border-radius: 0.85rem;
+    border: 1px solid var(--color-admin-border);
+    padding: 0.75rem 1rem;
+    background: var(--color-card-bg);
+    color: var(--color-text, inherit);
+    font: inherit;
+    resize: vertical;
+  }
+
+  .doctor-quick__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .doctor-quick__feedback {
+    min-height: 1.25rem;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-quick__feedback--success {
+    color: #059669;
+  }
+
+  .doctor-quick__feedback--error {
+    color: #dc2626;
+  }
+
+  .doctor-card {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .doctor-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .doctor-card__header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .doctor-card__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .admin-table--doctor th,
+  .admin-table--doctor td {
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 1rem;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-admin-border);
+  }
+
+  .admin-table th {
+    font-weight: 600;
+    color: var(--color-admin-table-header);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--color-admin-row-hover);
+  }
+
+  :global(.admin-empty td) {
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .doctor-appointment-meta {
+    margin-top: 0.35rem;
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: flex-start;
+  }
+
+  .doctor-text {
+    margin: 0;
+    text-align: left;
+  }
+
+  .doctor-note {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-row {
+    transition: background 0.18s ease;
+  }
+
+  .doctor-row:hover {
+    background: var(--color-admin-row-hover);
+  }
+
+  .doctor-feedback {
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--color-muted);
+  }
+
+  .admin-card--restricted {
+    text-align: center;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  :global(.admin-button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.4rem;
+    min-height: 2.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  :global(.admin-button--primary) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 18px 30px -16px rgba(37, 99, 235, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  :global(.admin-button--secondary) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.08));
+    color: #1d4ed8;
+    box-shadow: 0 12px 26px -18px rgba(37, 99, 235, 0.45);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+  }
+
+  :global(.admin-button--ghost) {
+    background: transparent;
+    border: 1px solid var(--color-admin-border);
+    color: inherit;
+  }
+
+  :global(.admin-button:not(:disabled):hover),
+  :global(.admin-button:not(:disabled):focus-visible) {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 30px -18px rgba(37, 99, 235, 0.45);
+  }
+
+  :global(.admin-button--primary:disabled) {
+    opacity: 0.7;
+    cursor: wait;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  :global(.admin-cell) {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  :global(.admin-cell--person) {
+    justify-items: start;
+    text-align: left;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 720px) {
+    .admin-toolbar--doctor {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-filter select {
+      width: 100%;
+    }
+  }
+</style>

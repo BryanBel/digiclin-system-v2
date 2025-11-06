@@ -12,8 +12,10 @@ export const loginUserRouteSchema = {
 export const registerUserRouteSchema = {
   params: z.object({}),
   body: z.object({
+    fullName: z.string().min(1, 'El nombre es obligatorio').optional(),
     email: z.string().email(),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    role: z.enum(['doctor', 'patient', 'admin']).optional(),
   }),
   queries: z.object({}),
 };
