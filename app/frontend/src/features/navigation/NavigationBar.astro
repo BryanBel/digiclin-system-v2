@@ -1,0 +1,99 @@
+---
+import NavigationClient from './NavigationClient.jsx';
+
+const { user, pathname } = Astro.props;
+const isLoggedIn = Boolean(user);
+const isAdmin = user?.role === 'admin';
+const isDoctor = user?.role === 'doctor';
+const userEmail = user?.email ?? '';
+const userRole = user?.role ?? '';
+---
+
+<nav
+  class="site-nav"
+  data-nav
+  data-user-email={userEmail}
+  data-user-role={userRole}
+>
+  <a
+    href="/"
+    class={`site-nav__link${pathname === '/' ? ' site-nav__link--active' : ''}`}
+  >
+    Inicio
+  </a>
+  <a
+    href="/schedule-appointments"
+    class={`site-nav__link${pathname === '/schedule-appointments' ? ' site-nav__link--active' : ''}`}
+  >
+    Agendar cita
+  </a>
+  <a
+    href="/doctor"
+    class={`site-nav__link${pathname === '/doctor' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="doctor"
+    hidden={!isDoctor}
+  >
+    Mis citas
+  </a>
+  <a
+    href="/admin/appointment-requests"
+    class={`site-nav__link${pathname === '/admin/appointment-requests' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="admin"
+    hidden={!isAdmin}
+  >
+    Solicitudes
+  </a>
+  <a
+    href="/admin/appointments"
+    class={`site-nav__link${pathname === '/admin/appointments' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="appointments"
+    hidden={!isAdmin}
+  >
+    Citas planificadas
+  </a>
+  <a
+    href="/admin/patients"
+    class={`site-nav__link${pathname === '/admin/patients' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="patients"
+    hidden={!isAdmin}
+  >
+    Pacientes
+  </a>
+  <a
+    href="/admin/medical-history"
+    class={`site-nav__link${pathname === '/admin/medical-history' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="medical-history"
+    hidden={!isAdmin && !isDoctor}
+  >
+    Historiales médicos
+  </a>
+  <a
+    href="/login"
+    class={`site-nav__link${pathname === '/login' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="login"
+    hidden={isLoggedIn}
+  >
+    Acceder
+  </a>
+  <a
+    href="/signup"
+    class={`site-nav__link${pathname === '/signup' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="signup"
+    hidden={isLoggedIn}
+  >
+    Registrarse
+  </a>
+  <button
+    type="button"
+    class="site-nav__button"
+    data-action="logout"
+    hidden={!isLoggedIn}
+  >
+    Cerrar sesión
+  </button>
+  <span class="site-nav__user" data-nav-email hidden={!isLoggedIn}>
+    {user?.email ?? ''}
+  </span>
+</nav>
+
+<NavigationClient client:load />

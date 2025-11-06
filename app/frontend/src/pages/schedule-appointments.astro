@@ -1,0 +1,224 @@
+---
+import Layout from "../layouts/Layout.astro";
+const locals = Astro.locals as { user?: unknown };
+const user = locals.user ?? null;
+const isLoggedIn = Boolean(user);
+---
+
+<Layout title="DigiClin | Solicita una cita">
+  <section class="request-shell">
+    <div class="request-card">
+      <header class="request-header">
+        <h1>Solicita una cita</h1>
+        <p>
+          Completa el formulario y nuestro equipo confirmará la disponibilidad
+          lo antes posible.
+        </p>
+      </header>
+
+      <form id="appointment-request-form" class="request-form" novalidate>
+        <label class="request-field">
+          <span>Nombre completo</span>
+          <input
+            type="text"
+            name="fullName"
+            placeholder="Ingresa tu nombre"
+            required
+          />
+        </label>
+
+        <label class="request-field">
+          <span>Correo electrónico</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="correo@ejemplo.com"
+            required
+          />
+        </label>
+
+        <label class="request-field">
+          <span>Teléfono de contacto</span>
+          <input type="tel" name="phone" placeholder="555-000-0000" required />
+        </label>
+
+        <div class="request-grid">
+          <label class="request-field">
+            <span>Cédula o documento</span>
+            <input
+              type="text"
+              name="documentId"
+              placeholder="V-00000000"
+              required
+            />
+          </label>
+          <label class="request-field">
+            <span>Fecha de nacimiento</span>
+            <input type="date" name="birthDate" required />
+          </label>
+        </div>
+
+        <div class="request-grid">
+          <label class="request-field">
+            <span>Género</span>
+            <select name="gender" required>
+              <option value="">Selecciona</option>
+              <option value="female">Femenino</option>
+              <option value="male">Masculino</option>
+            </select>
+          </label>
+          <label class="request-field">
+            <span>Edad</span>
+            <input
+              type="number"
+              name="age"
+              placeholder="Se calcula automáticamente"
+              readonly
+            />
+          </label>
+        </div>
+
+        <label class="request-field">
+          <span>Describe tus síntomas o motivo</span>
+          <textarea
+            name="symptoms"
+            placeholder="Ej. Dolor abdominal desde hace dos días"
+            rows="3"
+            required></textarea>
+        </label>
+
+        <div class="request-grid">
+          <label class="request-field">
+            <span>Fecha preferida</span>
+            <input type="date" name="preferredDate" />
+          </label>
+          <label class="request-field">
+            <span>Horario preferido</span>
+            <select name="preferredTimeRange">
+              <option value="">Sin preferencia</option>
+              <option value="morning">Mañana</option>
+              <option value="afternoon">Tarde</option>
+              <option value="evening">Noche</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="request-checkbox">
+          <input type="checkbox" name="isExistingPatient" />
+          <span>Ya soy paciente de DigiClin</span>
+        </label>
+
+        <p id="request-feedback" class="request-feedback" role="status"></p>
+
+        <button type="submit" class="request-submit">Enviar solicitud</button>
+      </form>
+
+      {!isLoggedIn && (
+        <footer class="request-footer">
+          ¿Ya tienes cuenta? <a href="/login">Inicia sesión para gestionar tus citas</a>
+        </footer>
+      )}
+    </div>
+  </section>
+</Layout>
+
+<script type="module">
+  const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
+  const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+
+  const rawProvidedEndpoint = (env.PUBLIC_BACKEND_URL ?? "").trim();
+  const devFallback = env.DEV === false ? "" : "http://localhost:3000";
+  const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null"
+    ? runtimeOrigin
+    : "";
+
+  let baseEndpoint = rawProvidedEndpoint || devFallback || runtimeFallback;
+
+  if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
+    baseEndpoint = "http://localhost:3000";
+  }
+
+  baseEndpoint = baseEndpoint
+    .replace(/\/$/, "")
+    .replace(/\/api$/, "");
+
+  const REQUESTS_ENDPOINT = `${baseEndpoint}/api/appointment-requests`;
+
+  const form = document.querySelector("#appointment-request-form");
+  const feedback = document.querySelector("#request-feedback");
+  const submitButton = form.querySelector(".request-submit");
+  const birthDateInput = form.querySelector("input[name='birthDate']");
+  const ageInput = form.querySelector("input[name='age']");
+
+  const calculateAge = (value) => {
+    if (!value) return "";
+    const reference = new Date();
+    const birth = new Date(value);
+    if (Number.isNaN(birth.getTime())) return "";
+    let age = reference.getFullYear() - birth.getFullYear();
+    const monthDiff = reference.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && reference.getDate() < birth.getDate())) {
+      age -= 1;
+    }
+    return age >= 0 ? String(age) : "";
+  };
+
+  const refreshAgeField = () => {
+    if (!ageInput) return;
+    const ageValue = calculateAge(birthDateInput?.value);
+    ageInput.value = ageValue;
+  };
+
+  birthDateInput?.addEventListener("change", refreshAgeField);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    feedback.textContent = "";
+    submitButton.disabled = true;
+    submitButton.textContent = "Enviando...";
+
+    const formData = new FormData(form);
+    const payload = {
+      fullName: formData.get("fullName")?.toString().trim(),
+      email: formData.get("email")?.toString().trim(),
+      phone: formData.get("phone")?.toString().trim(),
+      documentId: formData.get("documentId")?.toString().trim(),
+      birthDate: formData.get("birthDate")?.toString(),
+      gender: formData.get("gender")?.toString() || undefined,
+      age: ageInput?.value ? Number(ageInput.value) : undefined,
+      symptoms: formData.get("symptoms")?.toString().trim(),
+      preferredDate: formData.get("preferredDate") || undefined,
+      preferredTimeRange: formData.get("preferredTimeRange") || undefined,
+      isExistingPatient: formData.get("isExistingPatient") === "on",
+    };
+
+    try {
+      const response = await fetch(REQUESTS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data?.error ?? "No se pudo enviar la solicitud");
+
+      feedback.textContent =
+        "Solicitud enviada correctamente. Revisa tu correo para más detalles.";
+      feedback.classList.remove("request-feedback--error");
+      feedback.classList.add("request-feedback--success");
+      form.reset();
+    } catch (error) {
+      feedback.textContent = error.message;
+      feedback.classList.remove("request-feedback--success");
+      feedback.classList.add("request-feedback--error");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Enviar solicitud";
+      refreshAgeField();
+    }
+  });
+
+  refreshAgeField();
+</script>

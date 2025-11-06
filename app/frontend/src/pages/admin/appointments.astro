@@ -1,0 +1,138 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import appointmentsClient from './appointments.client.js?url';
+---
+
+<Layout title="DigiClin | Citas planificadas">
+  <section class="admin-shell">
+    <header class="admin-header">
+      <h1>Citas planificadas</h1>
+      <p class="admin-subtitle">
+        Revisa las citas asignadas y su estado actual.
+      </p>
+    </header>
+
+    <div class="admin-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Paciente</th>
+              <th>Doctor asignado</th>
+              <th>Fecha</th>
+              <th>Motivo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody data-appointments-body>
+            <tr class="admin-empty">
+              <td colspan="5">Cargando citas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .admin-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+  .admin-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    text-align: center;
+  }
+  .admin-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-size: 1.05rem;
+  }
+  .admin-card {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+  }
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 1rem;
+  }
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-admin-border);
+  }
+  .admin-table th {
+    font-weight: 600;
+    color: var(--color-admin-table-header);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+  .admin-empty td {
+    text-align: center;
+    color: var(--color-muted);
+  }
+  .admin-table tbody tr:hover {
+    background: var(--color-admin-row-hover);
+  }
+  :global(.admin-patient-meta) {
+    margin-top: 0.35rem;
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  :global(.admin-empty td) {
+    text-align: center;
+    color: var(--color-muted);
+  }
+  :global(.admin-status) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: rgba(148, 163, 184, 0.16);
+    color: #475569;
+  }
+  :global(.admin-status--confirmed) {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+  :global(.admin-status--pending) {
+    background: rgba(234, 179, 8, 0.18);
+    color: #b45309;
+  }
+  :global(.admin-status--cancelled) {
+    background: rgba(220, 38, 38, 0.18);
+    color: #b91c1c;
+  }
+  :global(.admin-status--completed) {
+    background: rgba(14, 159, 110, 0.16);
+    color: #047857;
+  }
+</style>
+
+<script type="module" src={appointmentsClient}></script>

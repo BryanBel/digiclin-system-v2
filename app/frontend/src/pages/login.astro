@@ -3,57 +3,99 @@ import AuthUnprotected from "../features/auth/AuthUnprotected.astro";
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout>
+<Layout title="DigiClin | Inicia sesión">
   <AuthUnprotected>
-    <main class="login-page">
-      <div class="login-card">
-        <div class="login-illustration" aria-hidden="true">
-          <img src="/background.svg" alt="" class="login-illustration__image" />
-        </div>
-        <div class="login-content">
-          <div class="login-header">
-            <span class="login-badge">
-              <svg class="login-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22c5-2 8-5.33 8-10V7l-8-4-8 4v5c0 4.67 3 8 8 10Z" />
-                <path d="M9 11.5 11.25 14 15 10" />
+    <section class="auth-shell">
+      <article class="auth-card">
+        <figure class="auth-illustration" aria-hidden="true">
+          <img 
+            src="/login-illustration.png"
+            alt=""
+            class="auth-illustration__image auth-illustration__image--login"
+          />
+        </figure>
+        <div class="auth-content login-panel">
+          <header class="auth-header">
+            <span class="auth-brand">
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22c5-2 8-5.33 8-10V7l-8-4-8 4v5c0 4.67 3 8 8 10Z"
+                ></path>
+                <path d="M9 11.5 11.25 14 15 10"></path>
               </svg>
               DigiClin
             </span>
-            <h1 class="login-title">Bienvenido de nuevo</h1>
-            <p class="login-subtitle">Inicia sesión en tu cuenta para continuar.</p>
-          </div>
+            <h1 class="auth-heading">Bienvenido de nuevo</h1>
+            <p class="auth-subheading">
+              Inicia sesión en tu cuenta para continuar.
+            </p>
+          </header>
 
-          <form id="login-form" class="login-form" novalidate>
-            <div class="login-field">
-              <label class="login-label" for="email">Email o usuario</label>
-              <div class="login-input__wrapper">
-                <span class="login-input__icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
-                    <path d="M20 21a8 8 0 1 0-16 0" />
-                  </svg>
+          <form id="login-form" class="auth-form" novalidate>
+            <div class="auth-field">
+              <label class="auth-label" for="email">Email o usuario</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">
+                  <svg
+                    class="auth-icon auth-icon--user"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    ><path stroke="none" d="M0 0h24v24H0z" fill="none"
+                    ></path><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"
+                    ></path><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"
+                    ></path></svg
+                  >
                 </span>
                 <input
-                  class="login-input"
+                  class="auth-input"
                   type="email"
                   id="email"
                   name="email"
-                  placeholder="Introduce tu email o usuario"
+                  placeholder="Introduce tu email o nombre de usuario"
                 />
               </div>
             </div>
 
-            <div class="login-field">
-              <label class="login-label" for="password">Contraseña</label>
-              <div class="login-input__wrapper">
-                <span class="login-input__icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
+            <div class="auth-field">
+              <label class="auth-label" for="password">Contraseña</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">
+                  <svg
+                    class="auth-icon auth-icon--lock"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    ><path stroke="none" d="M0 0h24v24H0z" fill="none"
+                    ></path><path
+                      d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"
+                    ></path><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"
+                    ></path><path d="M8 11v-4a4 4 0 1 1 8 0v4"></path></svg
+                  >
                 </span>
                 <input
-                  class="login-input"
+                  class="auth-input"
                   type="password"
                   id="password"
                   name="password"
@@ -62,43 +104,69 @@ import Layout from "../layouts/Layout.astro";
                 <button
                   type="button"
                   id="toggle-password"
-                  class="login-input__action"
+                  class="auth-input-action"
                   aria-label="Mostrar u ocultar contraseña"
                 >
-                  <svg class="login-input__action-icon login-input__action-icon--hidden" id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  <svg class="login-input__action-icon" id="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3.11 3.11 20.89 20.89" />
-                    <path d="M10.58 10.58a1.999 1.999 0 0 0 2.84 2.84" />
-                    <path d="M9.88 4.26A10.34 10.34 0 0 1 12 4c7 0 11 8 11 8a16.54 16.54 0 0 1-1.67 2.86" />
-                    <path d="M6.12 6.12A16.54 16.54 0 0 0 1 12s4 8 11 8c1.72 0 3.32-.43 4.75-1.17" />
-                  </svg>
+                  <svg
+                    id="icon-eye"
+                    class="auth-input-action-icon auth-input-action-icon--hidden icon icon-tabler icon-tabler-eye"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    ><path stroke="none" d="M0 0h24v24H0z" fill="none"
+                    ></path><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
+                    ></path><path
+                      d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
+                    ></path></svg
+                  >
+                  <svg
+                    id="icon-eye-off"
+                    class="auth-input-action-icon icon icon-tabler icon-tabler-eye-off"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    ><path stroke="none" d="M0 0h24v24H0z" fill="none"
+                    ></path><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828"
+                    ></path><path
+                      d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
+                    ></path><path d="M3 3l18 18"></path></svg
+                  > 
                 </button>
               </div>
             </div>
 
-            <div class="login-row">
-              <label class="login-checkbox">
+            <div class="auth-inline-actions">
+              <label class="auth-checkbox">
                 <input type="checkbox" />
                 <span>Recordarme</span>
               </label>
-              <a class="login-link" href="#">¿Olvidé mi contraseña?</a>
+              <a class="auth-link" href="#">¿Olvidé mi contraseña?</a>
             </div>
 
-            <button id="submit-button" type="submit" class="login-submit">
-              Iniciar sesión
-            </button>
+            <button id="submit-button" type="submit" class="auth-submit"
+              >Iniciar sesión</button
+            >
           </form>
 
-          <p class="login-footer">
+          <footer class="auth-footer">
             ¿No tienes una cuenta?
-            <a class="login-link" href="/signup">Regístrate</a>
-          </p>
+            <a class="auth-link" href="/signup">Regístrate</a>
+          </footer>
         </div>
-      </div>
-    </main>
+      </article>
+    </section>
   </AuthUnprotected>
 </Layout>
 
@@ -108,44 +176,48 @@ import Layout from "../layouts/Layout.astro";
   import { createNotification } from "../features/notifications/notification";
 
   // DOM Element Selection
-  const form = document.querySelector<HTMLFormElement>('#login-form');
-  const submitButton = document.querySelector<HTMLButtonElement>('#submit-button');
-  const togglePasswordButton = document.querySelector<HTMLButtonElement>('#toggle-password');
-  const passwordInput = document.querySelector<HTMLInputElement>('#password');
-  const iconEye = document.querySelector<SVGElement>('#icon-eye');
-  const iconEyeOff = document.querySelector<SVGElement>('#icon-eye-off');
+  const form = document.querySelector<HTMLFormElement>("#login-form");
+  const submitButton =
+    document.querySelector<HTMLButtonElement>("#submit-button");
+  const togglePasswordButton =
+    document.querySelector<HTMLButtonElement>("#toggle-password");
+  const passwordInput = document.querySelector<HTMLInputElement>("#password");
+  const iconEye = document.querySelector<SVGElement>("#icon-eye");
+  const iconEyeOff = document.querySelector<SVGElement>("#icon-eye-off");
 
-  togglePasswordButton?.addEventListener('click', () => {
+  togglePasswordButton?.addEventListener("click", () => {
     if (!passwordInput) return;
-    const isHidden = passwordInput.type === 'password';
-    passwordInput.type = isHidden ? 'text' : 'password';
-    iconEye?.classList.toggle('login-input__action-icon--hidden', !isHidden);
-    iconEyeOff?.classList.toggle('login-input__action-icon--hidden', isHidden);
+    const isHidden = passwordInput.type === "password";
+    passwordInput.type = isHidden ? "text" : "password";
+    iconEye?.classList.toggle("auth-input-action-icon--hidden", !isHidden);
+    iconEyeOff?.classList.toggle("auth-input-action-icon--hidden", isHidden);
   });
 
   if (form && submitButton) {
     const originalButtonText = submitButton.textContent;
 
-    form.addEventListener('submit', async (event: SubmitEvent) => {
+    form.addEventListener("submit", async (event: SubmitEvent) => {
       event.preventDefault();
 
       submitButton.disabled = true;
-      submitButton.textContent = 'Iniciando...';
+      submitButton.textContent = "Iniciando...";
 
       const formData = new FormData(form);
-      const email = formData.get('email') as string;
-      const password = formData.get('password') as string;
+      const email = formData.get("email") as string;
+      const password = formData.get("password") as string;
 
       try {
         await AuthModule.login({ email, password });
-        window.location.assign('/');
+        window.location.assign("/");
       } catch (error: any) {
-        console.error('Login failed:', error);
+        console.error("Login failed:", error);
         const errorData = await error?.response?.json().catch(() => null);
-        createNotification({ 
-          title: 'Ups! Hubo un error', 
-          description: errorData?.error ?? 'Credenciales incorrectas o problema del servidor.',
-          type: 'error'
+        createNotification({
+          title: "Ups! Hubo un error",
+          description:
+            errorData?.error ??
+            "Credenciales incorrectas o problema del servidor.",
+          type: "error",
         });
       } finally {
         submitButton.disabled = false;
@@ -154,304 +226,3 @@ import Layout from "../layouts/Layout.astro";
     });
   }
 </script>
-
-<style>
-  :root {
-    --login-page-bg: #f5f7fb;
-    --login-card-bg: #ffffff;
-    --login-card-border: #d7e3f7;
-    --login-heading: #0f172a;
-    --login-subheading: #5b6b84;
-    --login-text: #1f2a3d;
-    --login-muted: #64748b;
-    --login-input-bg: #f8fafc;
-    --login-input-border: #d8e0f0;
-    --login-input-icon: #94a3b8;
-    --login-input-placeholder: #94a3b8;
-    --login-primary: #1d4ed8;
-    --login-primary-hover: #1a3fa7;
-    --login-link: #2563eb;
-    --login-illustration-bg: linear-gradient(135deg, #0ea5e9, #22d3ee);
-  }
-
-  .dark {
-    --login-page-bg: #0b1220;
-    --login-card-bg: #121b2f;
-    --login-card-border: #1f2b42;
-    --login-heading: #f8fafc;
-    --login-subheading: #a5b4cb;
-    --login-text: #d4dcf1;
-    --login-muted: #94a3b8;
-    --login-input-bg: #1a253a;
-    --login-input-border: #27344f;
-    --login-input-icon: #7b8dad;
-    --login-input-placeholder: #7b8dad;
-    --login-primary: #3b82f6;
-    --login-primary-hover: #2563eb;
-    --login-link: #60a5fa;
-    --login-illustration-bg: linear-gradient(135deg, #0f766e, #2563eb);
-  }
-
-  .login-page {
-    min-height: calc(100vh - 4rem);
-    background: var(--login-page-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 1.25rem;
-    transition: background 0.3s ease;
-  }
-
-  .login-card {
-    width: 100%;
-    max-width: 960px;
-    background: var(--login-card-bg);
-    border: 1px solid var(--login-card-border);
-    border-radius: 28px;
-    box-shadow: 0 40px 80px -40px rgba(15, 23, 42, 0.35);
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    overflow: hidden;
-    transition: background 0.3s ease, border-color 0.3s ease;
-  }
-
-  @media (max-width: 1024px) {
-    .login-card {
-      grid-template-columns: 1fr;
-      border-radius: 24px;
-    }
-
-    .login-illustration {
-      display: none;
-    }
-  }
-
-  .login-illustration {
-    position: relative;
-    background: var(--login-illustration-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2.5rem;
-  }
-
-  .login-illustration__image {
-    width: min(340px, 90%);
-    max-height: 320px;
-    object-fit: contain;
-    filter: drop-shadow(0 24px 45px rgba(15, 23, 42, 0.35));
-  }
-
-  .login-content {
-    padding: clamp(2.5rem, 5vw, 3.75rem);
-    display: flex;
-    flex-direction: column;
-    gap: 2.25rem;
-  }
-
-  .login-header {
-    text-align: left;
-    color: var(--login-text);
-  }
-
-  .login-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 999px;
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--login-primary);
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-
-  .dark .login-badge {
-    background: rgba(96, 165, 250, 0.15);
-  }
-
-  .login-badge__icon {
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-
-  .login-title {
-    margin-top: 1.5rem;
-    font-size: clamp(2rem, 4vw, 2.5rem);
-    font-weight: 700;
-    color: var(--login-heading);
-  }
-
-  .login-subtitle {
-    margin-top: 0.75rem;
-    color: var(--login-subheading);
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-
-  .login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .login-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .login-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--login-text);
-  }
-
-  .login-input__wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .login-input__icon {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding-left: 1rem;
-    color: var(--login-input-icon);
-  }
-
-  .login-input__icon svg {
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-
-  .login-input {
-    width: 100%;
-    padding: 0.85rem 1rem 0.85rem 3rem;
-    border-radius: 16px;
-    border: 1px solid var(--login-input-border);
-    background: var(--login-input-bg);
-    color: var(--login-text);
-    font-size: 0.98rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .login-input::placeholder {
-    color: var(--login-input-placeholder);
-  }
-
-  .login-input:focus {
-    border-color: var(--login-primary);
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-    outline: none;
-  }
-
-  .login-input__action {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--login-input-icon);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .login-input__action-icon {
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-
-  .login-input__action-icon--hidden {
-    display: none;
-  }
-
-  .login-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    font-size: 0.9rem;
-    color: var(--login-muted);
-  }
-
-  .login-checkbox {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: inherit;
-  }
-
-  .login-checkbox input {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 4px;
-    border: 1px solid var(--login-input-border);
-    accent-color: var(--login-primary);
-  }
-
-  .login-link {
-    color: var(--login-link);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .login-link:hover {
-    text-decoration: underline;
-  }
-
-  .login-submit {
-    width: 100%;
-    background: var(--login-primary);
-    color: #fff;
-    border: none;
-    border-radius: 16px;
-    padding: 0.95rem;
-    font-size: 1rem;
-    font-weight: 600;
-    box-shadow: 0 18px 32px -18px rgba(37, 99, 235, 0.75);
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .login-submit:hover {
-    background: var(--login-primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 22px 40px -18px rgba(37, 99, 235, 0.65);
-  }
-
-  .login-submit:disabled {
-    background: rgba(148, 163, 184, 0.5);
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-
-  .login-footer {
-    text-align: center;
-    font-size: 0.95rem;
-    color: var(--login-muted);
-  }
-
-  @media (max-width: 640px) {
-    .login-content {
-      padding: 2.25rem clamp(1.25rem, 6vw, 1.75rem);
-    }
-
-    .login-row {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .login-link {
-      align-self: flex-start;
-    }
-  }
-</style>

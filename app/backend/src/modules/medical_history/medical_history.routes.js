@@ -1,101 +1,138 @@
 import { Router } from 'express';
 import {
-  getAllMedicalHistory,
-  getMedicalHistoryById,
-  createMedicalHistory,
-  updateMedicalHistory,
-  deleteMedicalHistory,
-  getMedicalHistoryByPatientId,
+  listMedicalHistoryEntries,
+  findMedicalHistoryById,
+  createMedicalHistoryEntry,
 } from './medical_history.repository.js';
-import attachmentsRouter from '../attachments/attachments.routes.js';
+import {
+  listMedicalHistorySchema,
+  createMedicalHistorySchema,
+} from './medical_history.routes.schemas.js';
+import { parseDateInput } from '../../utils/dateHelpers.js';
 
 const router = Router();
 
-// Obtener todo el historial médico
+const mapMedicalHistory = (row) => {
+  if (!row) return null;
+
+  const entryDateIso = row.entry_date instanceof Date ? row.entry_date.toISOString() : null;
+
+  return {
+    id: row.id,
+    entryDate: entryDateIso,
+    medicalInform: row.medical_inform,
+    treatment: row.treatment ?? null,
+    recipe: row.recipe ?? null,
+    patientId: row.patient_id,
+    doctorId: row.doctor_id,
+    visitId: row.visit_id,
+    patient: row.patient_id
+      ? {
+          id: row.patient_id,
+          name: row.patient_name ?? null,
+          documentId: row.patient_document_id ?? null,
+          email: row.patient_email ?? null,
+          phone: row.patient_phone ?? null,
+        }
+      : null,
+    doctor: row.doctor_id
+      ? {
+          id: row.doctor_id,
+          name: row.doctor_name ?? null,
+          email: row.doctor_email ?? null,
+        }
+      : null,
+  };
+};
+
+const ensureRole = (req, res, allowedRoles) => {
+  const userRole = typeof req.user?.role === 'string' ? req.user.role.toLowerCase() : '';
+  const normalizedAllowedRoles = allowedRoles.map((role) => role.toLowerCase());
+
+  if (!userRole || !normalizedAllowedRoles.includes(userRole)) {
+    res.status(403).json({ error: 'Acceso restringido para este recurso.' });
+    return false;
+  }
+  return true;
+};
+
 router.get('/', async (req, res, next) => {
   try {
-    const history = await getAllMedicalHistory();
-    res.json(history);
+    if (!ensureRole(req, res, ['admin', 'doctor'])) return;
+
+    const query = listMedicalHistorySchema.parse(req.query);
+    const entries = await listMedicalHistoryEntries(query);
+    res.json({ entries: entries.map(mapMedicalHistory) });
   } catch (error) {
     next(error);
   }
 });
 
-// Obtener historial médico por ID de paciente
-router.get('/patient/:patientId', async (req, res, next) => {
-  try {
-    const history = await getMedicalHistoryByPatientId(req.params.patientId);
-    res.json(history);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Obtener historial médico por ID
 router.get('/:id', async (req, res, next) => {
   try {
-    const record = await getMedicalHistoryById(req.params.id);
-    if (!record) {
-      return res.status(404).json({ error: 'Registro no encontrado' });
+    if (!ensureRole(req, res, ['admin', 'doctor'])) return;
+
+    const entryId = Number(req.params.id);
+    if (Number.isNaN(entryId)) {
+      return res.status(400).json({ error: 'Identificador inválido.' });
     }
-    res.json(record);
+
+    const entry = await findMedicalHistoryById({ id: entryId });
+    if (!entry) {
+      return res.status(404).json({ error: 'Historial médico no encontrado.' });
+    }
+
+    res.json({ entry: mapMedicalHistory(entry) });
   } catch (error) {
     next(error);
   }
 });
 
-// Crear historial médico
 router.post('/', async (req, res, next) => {
   try {
-    // El frontend envía { description, patient_id }
-    const { description, patient_id, treatment, recipe, entry_date } = req.body;
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'Usuario no autenticado o sesión inválida.' });
+    if (!ensureRole(req, res, ['doctor'])) return;
+
+    const payload = createMedicalHistorySchema.parse(req.body);
+
+    const entryDate = payload.entryDate ? parseDateInput(payload.entryDate) : null;
+    if (payload.entryDate && !entryDate) {
+      return res.status(400).json({ error: 'Fecha inválida.' });
     }
-    // El ID del doctor lo obtenemos del usuario autenticado por el middleware
-    const doctor_id = req.user.id;
 
-    // Construimos el objeto que espera la función del repositorio
-    const newEntryData = {
-      medical_inform: description,
-      patient_id,
-      doctor_id,
-      treatment: treatment || null,
-      recipe: recipe || null,
-      entry_date: entry_date || new Date(), // Usar la fecha provista o la actual por defecto
-    };
+    const created = await createMedicalHistoryEntry({
+      entryDate,
+      medicalInform: payload.medicalInform,
+      treatment: payload.treatment,
+      recipe: payload.recipe,
+      patientId: payload.patientId,
+      doctorId: req.user?.id,
+      visitId: payload.visitId,
+    });
 
-    const nuevoRecord = await createMedicalHistory(newEntryData);
-    res.status(201).json(nuevoRecord);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Actualizar historial médico
-router.put('/:id', async (req, res, next) => {
-  try {
-    const recordActualizado = await updateMedicalHistory(req.params.id, req.body);
-    if (!recordActualizado) {
-      return res.status(404).json({ error: 'Registro no encontrado' });
+    if (!created) {
+      return res.status(500).json({ error: 'No se pudo crear el historial médico.' });
     }
-    res.json(recordActualizado);
+
+    res.status(201).json({ entry: mapMedicalHistory(created) });
   } catch (error) {
     next(error);
   }
 });
 
-// Eliminar historial médico
-router.delete('/:id', async (req, res, next) => {
-  try {
-    await deleteMedicalHistory(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+router.patch('/:id', (req, res) => {
+  if (!ensureRole(req, res, ['doctor'])) return;
+  return res.status(405).json({
+    error:
+      'Los registros del historial son inmutables. Crea un nuevo registro para añadir información.',
+  });
 });
 
-// Anidamos el router de adjuntos. Debe ir al final para no interferir con rutas como /:id
-router.use('/:medicalHistoryId/attachments', attachmentsRouter);
+router.delete('/:id', (req, res) => {
+  if (!ensureRole(req, res, ['doctor'])) return;
+  return res.status(405).json({
+    error:
+      'Los registros del historial no pueden eliminarse para preservar la trazabilidad clínica.',
+  });
+});
 
 export default router;

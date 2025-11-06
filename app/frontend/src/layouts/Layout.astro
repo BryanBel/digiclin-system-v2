@@ -1,174 +1,54 @@
 ---
-import '../styles/global.css';
+import "../styles/global.css";
+import NavigationBar from "../features/navigation/NavigationBar.astro";
+import ThemeToggleButton from "../features/navigation/ThemeToggleButton.astro";
+
+const user = Astro.locals.user ?? null;
+const pathname = Astro.url.pathname;
 const { title } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="es">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title || 'DigiClin'}</title>
-		<script is:inline>
-			(() => {
-				try {
-					const storedTheme = localStorage.getItem('theme');
-					const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-					if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
-						document.documentElement.classList.add('dark');
-					} else {
-						document.documentElement.classList.remove('dark');
-					}
-				} catch (error) {
-					console.warn('No se pudo aplicar el tema preferido.', error);
-				}
-			})();
-		</script>
-	</head>
-	<body>
-			<header class="site-header shadow">
-				<div class="site-header__content px-6 py-4 md:px-10">
-					<a href="/" class="site-brand">DigiClin</a>
-					<nav id="nav-links" class="site-nav"></nav>
-					<button id="theme-toggle" class="theme-toggle" type="button" aria-label="Cambiar tema" aria-pressed="false">
-						<span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀️</span>
-						<span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">🌙</span>
-					</button>
-				</div>
-			</header>
-			<main class="max-w-6xl mx-auto py-12 px-6 md:px-12">
-				<slot />
-			</main>
-			<footer class="bg-zoom-dark text-white py-4 text-center mt-12">
-				© 2025 DigiClin. Todos los derechos reservados.
-			</footer>
-			<div id="notification-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2">
-			</div>
-			<script type="module">
-				import { getLinks } from '../features/navigation/navigationUtils.js';
-				import AuthModule, { user } from '../features/auth/authModule.js';
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title || "DigiClin"}</title>
+    <script is:inline>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem("theme");
+          const prefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)"
+          ).matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch (error) {
+          console.warn("No se pudo aplicar el tema preferido.", error);
+        }
+      })();
+    </script>
+  </head>
 
-				// @ts-check
-				const navLinksContainer = document.getElementById('nav-links');
-				const themeToggle = document.getElementById('theme-toggle');
-				const prefersDarkMedia = window.matchMedia('(prefers-color-scheme: dark)');
-
-				/**
-				 * @typedef {'light' | 'dark'} ThemeMode
-				 */
-
-				function renderNav() {
-					if (!navLinksContainer) return;
-
-					navLinksContainer.innerHTML = '';
-
-					const links = getLinks(window.location.pathname);
-					const fragment = document.createDocumentFragment();
-
-					for (const link of links) {
-						if (link.type === 'link') {
-							const anchor = document.createElement('a');
-							if (link.path) anchor.href = link.path;
-							anchor.textContent = link.text;
-							const classes = ['site-nav__link'];
-							if (link.isActive) classes.push('site-nav__link--active');
-							anchor.className = classes.join(' ');
-							fragment.appendChild(anchor);
-						} else if (link.type === 'button') {
-							const button = document.createElement('button');
-							button.type = 'button';
-							button.textContent = link.text;
-							button.className = 'site-nav__button';
-							if (typeof link.handler === 'function') {
-								button.addEventListener('click', async (event) => {
-									event.preventDefault();
-									try {
-										await link.handler?.();
-									} catch (handlerError) {
-										console.error('Fallo al ejecutar la acción de navegación.', handlerError);
-									}
-								});
-							}
-							fragment.appendChild(button);
-						}
-					}
-					navLinksContainer.appendChild(fragment);
-				}
-
-				async function initializeApp() {
-					try {
-						await AuthModule.getLoggedUser();
-					} catch (error) {
-						console.log('Authentication check failed, rendering public navigation links.');
-						renderNav();
-					}
-				}
-
-				user.subscribe(renderNav);
-				document.addEventListener('astro:page-load', renderNav);
-				initializeApp();
-				renderNav();
-
-				/**
-				 * @returns {'light' | 'dark' | null}
-				 */
-				const readStoredTheme = () => {
-					try {
-						return localStorage.getItem('theme');
-					} catch (storageError) {
-						console.warn('No se pudo leer el tema almacenado.', storageError);
-						return null;
-					}
-				};
-
-				/**
-				 * @returns {ThemeMode}
-				 */
-				const resolveInitialTheme = () => {
-					const stored = readStoredTheme();
-					if (stored === 'light' || stored === 'dark') return stored;
-					return prefersDarkMedia.matches ? 'dark' : 'light';
-				};
-
-				/** @type {ThemeMode} */
-				let activeTheme = resolveInitialTheme();
-
-				const syncTheme = () => {
-					const isDark = activeTheme === 'dark';
-					document.documentElement.classList.toggle('dark', isDark);
-					if (themeToggle) {
-						themeToggle.setAttribute('aria-pressed', String(isDark));
-						themeToggle.setAttribute('data-theme', activeTheme);
-					}
-				};
-
-				const persistTheme = () => {
-					try {
-						localStorage.setItem('theme', activeTheme);
-					} catch (storageError) {
-						console.warn('No se pudo guardar la preferencia de tema.', storageError);
-					}
-				};
-
-				syncTheme();
-
-				if (themeToggle) {
-					themeToggle.addEventListener('click', () => {
-						activeTheme = activeTheme === 'dark' ? 'light' : 'dark';
-						syncTheme();
-						persistTheme();
-					});
-				}
-
-				prefersDarkMedia.addEventListener('change', (event) => {
-					const stored = readStoredTheme();
-					if (!stored) {
-						activeTheme = event.matches ? 'dark' : 'light';
-						syncTheme();
-					}
-				});
-			</script>
-		</body>
-	</html>
+  <body class="layout-shell">
+    <header class="site-header shadow">
+      <div class="site-header__content">
+        <a href="/" class="site-brand">DigiClin</a>
+  <NavigationBar user={user} pathname={pathname} />
+  <ThemeToggleButton />
+      </div>
+    </header>
+    <main class="site-main"><slot /></main>
+    <footer class="site-footer">© 2025 DigiClin. Todos los derechos reservados.</footer>
+    <div
+      id="notification-container"
+      class="fixed top-5 right-5 z-50 flex flex-col gap-2"
+    >
+    </div>
+  </body>
+</html>
