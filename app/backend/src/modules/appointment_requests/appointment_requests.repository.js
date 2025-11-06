@@ -1,0 +1,219 @@
+import crypto from 'crypto';
+import pool from '../../db/pool.js';
+import { createAppointment } from '../appointments/appointments.repository.js';
+import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
+import { ensurePatientFromRequest } from '../patients/patients.repository.js';
+import { calculateAge, parseDateInput } from '../../utils/dateHelpers.js';
+
+export const createAppointmentRequest = async ({
+  fullName,
+  email,
+  phone,
+  documentId,
+  birthDate,
+  gender,
+  age,
+  symptoms,
+  preferredDate,
+  preferredTimeRange,
+  isExistingPatient,
+}) => {
+  const shouldGenerateToken = isExistingPatient;
+  const linkToken = shouldGenerateToken ? crypto.randomBytes(32).toString('hex') : null;
+  const tokenExpiresAt = linkToken ? new Date(Date.now() + 1000 * 60 * 60 * 24) : null;
+  const birthDateValue = parseDateInput(birthDate);
+  const normalizedAge = age ?? calculateAge(birthDateValue);
+
+  const query = `
+    INSERT INTO appointment_requests (
+      full_name,
+      email,
+      phone,
+      document_id,
+      birth_date,
+      gender,
+      age,
+      symptoms,
+      preferred_date,
+      preferred_time_range,
+      is_existing_patient,
+      link_token,
+      token_expires_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    RETURNING *
+  `;
+
+  const values = [
+    fullName,
+    email,
+    phone,
+    documentId ?? null,
+    birthDateValue,
+    gender ?? null,
+    normalizedAge ?? null,
+    symptoms,
+    preferredDate ?? null,
+    preferredTimeRange ?? null,
+    isExistingPatient,
+    linkToken,
+    tokenExpiresAt,
+  ];
+
+  const { rows } = await pool.query(query, values);
+  return { request: rows[0], linkToken };
+};
+
+export const listAppointmentRequests = async ({ status, search, limit = 25, offset = 0 }) => {
+  const filters = [];
+  const params = [];
+  let paramIndex = 1;
+
+  if (status) {
+    filters.push(`status = $${paramIndex++}`);
+    params.push(status);
+  }
+
+  if (search) {
+    filters.push(
+      `(
+        full_name ILIKE $${paramIndex}
+        OR email ILIKE $${paramIndex}
+        OR phone ILIKE $${paramIndex}
+        OR document_id ILIKE $${paramIndex}
+      )`,
+    );
+    params.push(`%${search}%`);
+    paramIndex += 1;
+  }
+
+  const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+
+  const query = `
+    SELECT *
+    FROM appointment_requests
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${paramIndex++}
+    OFFSET $${paramIndex}
+  `;
+
+  params.push(limit);
+  params.push(offset);
+
+  const { rows } = await pool.query(query, params);
+  return rows;
+};
+
+export const findAppointmentRequestById = async ({ id }) => {
+  const query = `
+    SELECT *
+    FROM appointment_requests
+    WHERE id = $1
+  `;
+  const { rows } = await pool.query(query, [id]);
+  return rows[0] ?? null;
+};
+
+export const updateAppointmentRequestStatus = async ({ id, status, adminNote }) => {
+  const query = `
+    UPDATE appointment_requests
+    SET status = $1,
+        admin_note = $2,
+        updated_at = NOW()
+    WHERE id = $3
+    RETURNING *
+  `;
+
+  const { rows } = await pool.query(query, [status, adminNote ?? null, id]);
+  return rows[0] ?? null;
+};
+
+export const confirmAppointmentRequest = async ({
+  id,
+  doctorId,
+  scheduledFor,
+  adminNote,
+  createdByUser,
+}) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const requestResult = await client.query(
+      'SELECT * FROM appointment_requests WHERE id = $1 FOR UPDATE',
+      [id],
+    );
+
+    const request = requestResult.rows[0];
+    if (!request) throw new Error('Solicitud no encontrada');
+
+    if (request.status === APPOINTMENT_REQUEST_STATUS.CONFIRMED) {
+      throw new Error('La solicitud ya fue confirmada');
+    }
+
+    const patient = await ensurePatientFromRequest({
+      client,
+      fullName: request.full_name,
+      phone: request.phone,
+      email: request.email,
+      documentId: request.document_id,
+      birthDate: request.birth_date,
+      gender: request.gender,
+      age: request.age,
+    });
+
+    const patientId = patient?.id ?? null;
+    const resolvedAge =
+      patient?.age ??
+      (patient?.birth_date ? calculateAge(patient.birth_date) : (request.age ?? null));
+
+    const appointment = await createAppointment(
+      {
+        patientId,
+        doctorId,
+        scheduledFor,
+        reason: request.symptoms,
+        additionalNotes: adminNote ?? null,
+        createdByUser,
+        legacyName: request.full_name,
+        legacyPhone: request.phone ?? null,
+        intakePayload: request.public_id
+          ? JSON.stringify({ requestPublicId: request.public_id })
+          : null,
+      },
+      client,
+    );
+
+    const updateResult = await client.query(
+      `
+        UPDATE appointment_requests
+        SET status = $1,
+            admin_note = $2,
+            appointment_id = $3,
+            patient_id = $4,
+            age = COALESCE(age, $5),
+            updated_at = NOW()
+        WHERE id = $6
+        RETURNING *
+      `,
+      [
+        APPOINTMENT_REQUEST_STATUS.CONFIRMED,
+        adminNote ?? null,
+        appointment.id,
+        patientId,
+        resolvedAge ?? null,
+        id,
+      ],
+    );
+
+    await client.query('COMMIT');
+
+    return { request: updateResult.rows[0], appointment };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};

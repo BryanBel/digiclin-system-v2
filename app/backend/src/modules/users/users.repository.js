@@ -4,10 +4,10 @@ import { ErrorWithStatus } from '../../utils/errorTypes.js';
 const addOne = async (payload) => {
   const response = await db.query(
     `
-    INSERT INTO users (email, passwordHash)
-    VALUES ($1, $2) RETURNING *
+    INSERT INTO users (email, passwordhash, full_name, role)
+    VALUES ($1, $2, $3, $4) RETURNING *
   `,
-    [payload.email, payload.passwordHash],
+    [payload.email, payload.passwordHash, payload.fullName ?? null, payload.role ?? 'doctor'],
   );
   return response.rows[0];
 };

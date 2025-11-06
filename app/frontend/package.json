@@ -11,12 +11,9 @@
   "dependencies": {
     "@astrojs/node": "^9.4.3",
     "@astrojs/react": "^4.3.1",
-    "@heroicons/react": "^2.2.0",
-    "@heroui/react": "^2.8.4",
-    "@heroui/theme": "^2.4.22",
+    "@tabler/icons-react": "^3.35.0",
     "astro": "^5.13.7",
     "astro-icon": "^1.1.5",
-    "heroui-cli": "^1.2.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
