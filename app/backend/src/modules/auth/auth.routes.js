@@ -39,14 +39,15 @@ authRouter.post('/register', async (req, res) => {
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
   try {
+    const toEmail = normalizedFullName ? `${normalizedFullName} <${email}>` : email;
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-      to: 'bryanbelandriav@gmail.com',
+      to: toEmail,
       subject: 'Verifica tu correo',
       html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
     });
 
-    console.log(`Verification email sent successfully to ${'bryanbelandriav@gmail.com'}`);
+    console.log(`Verification email sent successfully to ${email}`);
     res.status(201).json({
       message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
     });

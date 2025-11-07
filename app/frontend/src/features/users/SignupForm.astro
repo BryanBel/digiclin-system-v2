@@ -410,9 +410,13 @@
         }
       } catch (error: any) {
         console.error("Signup failed:", error);
-        const errorData = await error?.response?.json().catch(() => null);
+        const errorData = error?.response
+          ? await error.response.json().catch(() => null)
+          : null;
+        const backendMessage =
+          errorData?.error ?? errorData?.message ?? error?.message;
         errorMessageEl.textContent =
-          errorData?.message ?? "Ocurrió un error inesperado.";
+          backendMessage ?? "Ocurrió un error inesperado.";
       } finally {
         if (form.parentElement) {
           submitButton.disabled = false;
