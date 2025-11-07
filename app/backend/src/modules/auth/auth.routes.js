@@ -9,7 +9,7 @@ import jwt from 'jsonwebtoken';
 import usersRepository from '../users/users.repository.js';
 import { ErrorWithStatus } from '../../utils/errorTypes.js';
 import { authenticateUser } from './auth.middlewares.js';
-import nodemailerService from '../../services/nodemailer.js';
+import resend from '../../services/resend.js';
 const authRouter = express.Router();
 
 authRouter.post('/register', async (req, res) => {
@@ -38,28 +38,27 @@ authRouter.post('/register', async (req, res) => {
   const backendUrl = process.env.BACKEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000';
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
-  res.status(201).json({
-    message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
-  });
-
-  nodemailerService
-    .sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      to: 'bryanbelandriav@gmail.com',
       subject: 'Verifica tu correo',
       html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
-    })
-    .then(() => {
-      console.log(`Verification email sent successfully to ${email}`);
-    })
-    .catch((error) => {
-      console.error('Error sending verification email:', error);
     });
+
+    console.log(`Verification email sent successfully to ${'bryanbelandriav@gmail.com'}`);
+    res.status(201).json({
+      message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
+    });
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    throw new ErrorWithStatus(500, 'Error al enviar el correo de verificación');
+  }
 });
 
 authRouter.get('/verify-email/:token', async (req, res) => {
   const { token } = verifyEmailRouteSchema.params.parse(req.params);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4321'; // URL del frontend
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4321';
 
   try {
     const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
