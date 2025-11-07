@@ -39,8 +39,7 @@ router.post('/', async (req, res, next) => {
       ? `${frontendUrl}/link-appointment?token=${linkToken}`
       : `${frontendUrl}/login`;
 
-    const fromEmail =
-      process.env.RESEND_FROM_EMAIL || process.env.EMAIL_USER || 'onboarding@resend.dev';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     await resend.emails.send({
       from: fromEmail,
@@ -104,8 +103,7 @@ router.post('/:id/confirm', async (req, res, next) => {
 
     const frontendUrl = process.env.FRONTEND_BASE_URL ?? 'http://localhost:4321';
 
-    const fromEmail =
-      process.env.RESEND_FROM_EMAIL || process.env.EMAIL_USER || 'onboarding@resend.dev';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const scheduledForText =
       payload.scheduledFor instanceof Date
         ? payload.scheduledFor.toISOString()
