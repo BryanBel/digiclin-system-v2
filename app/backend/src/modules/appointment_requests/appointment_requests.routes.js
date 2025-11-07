@@ -14,7 +14,7 @@ import {
   updateAppointmentRequestSchema,
 } from './appointment_requests.routes.schemas.js';
 import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
-import mailer from '../../services/nodemailer.js';
+import resend from '../../services/resend.js';
 import usersRepository from '../users/users.repository.js';
 
 const router = Router();
@@ -39,8 +39,11 @@ router.post('/', async (req, res, next) => {
       ? `${frontendUrl}/link-appointment?token=${linkToken}`
       : `${frontendUrl}/login`;
 
-    await mailer.sendMail({
-      from: process.env.EMAIL_USER,
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL || process.env.EMAIL_USER || 'onboarding@resend.dev';
+
+    await resend.emails.send({
+      from: fromEmail,
       to: payload.email,
       subject: 'Solicitud de cita recibida',
       text: [
@@ -101,15 +104,22 @@ router.post('/:id/confirm', async (req, res, next) => {
 
     const frontendUrl = process.env.FRONTEND_BASE_URL ?? 'http://localhost:4321';
 
-    await mailer.sendMail({
-      from: process.env.EMAIL_USER,
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL || process.env.EMAIL_USER || 'onboarding@resend.dev';
+    const scheduledForText =
+      payload.scheduledFor instanceof Date
+        ? payload.scheduledFor.toISOString()
+        : payload.scheduledFor;
+
+    await resend.emails.send({
+      from: fromEmail,
       to: request.email,
       subject: 'Tu cita ha sido confirmada',
       text: [
         `Hola ${request.full_name},`,
         '',
         'Tu cita fue confirmada correctamente.',
-        `Fecha y hora: ${payload.scheduledFor.toISOString()}`,
+        `Fecha y hora: ${scheduledForText}`,
         `Doctor asignado: ${doctorEmail}`,
         '',
         `Puedes consultar tu cita aquí: ${frontendUrl}/login`,
