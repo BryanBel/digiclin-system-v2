@@ -2,7 +2,10 @@ import crypto from 'crypto';
 import pool from '../../db/pool.js';
 import { createAppointment } from '../appointments/appointments.repository.js';
 import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
-import { ensurePatientFromRequest } from '../patients/patients.repository.js';
+import {
+  ensurePatientFromRequest,
+  ensurePatientForUserRegistration,
+} from '../patients/patients.repository.js';
 import { calculateAge, parseDateInput } from '../../utils/dateHelpers.js';
 
 export const createAppointmentRequest = async ({
@@ -216,4 +219,46 @@ export const confirmAppointmentRequest = async ({
   } finally {
     client.release();
   }
+};
+
+export const assignUserToAppointmentRequests = async ({ email, userId }) => {
+  if (!email || !userId) return [];
+
+  const query = `
+    UPDATE appointment_requests
+    SET user_id = $2,
+        is_existing_patient = true,
+        updated_at = NOW()
+    WHERE LOWER(email) = LOWER($1)
+      AND (user_id IS NULL OR user_id <> $2)
+    RETURNING *
+  `;
+
+  const { rows } = await pool.query(query, [email, userId]);
+  return rows;
+};
+
+export const ensurePatientAndLinkRequestsForEmail = async ({ email, fullName }) => {
+  if (!email) return null;
+
+  const patient = await ensurePatientForUserRegistration({ email, fullName });
+
+  if (patient) {
+    await linkPatientToAppointmentRequests({ email, patientId: patient.id });
+  }
+
+  return patient;
+};
+
+const linkPatientToAppointmentRequests = async ({ email, patientId }) => {
+  const query = `
+    UPDATE appointment_requests
+    SET patient_id = $2,
+        updated_at = NOW()
+    WHERE LOWER(email) = LOWER($1)
+      AND (patient_id IS NULL OR patient_id <> $2)
+    RETURNING *
+  `;
+
+  await pool.query(query, [email, patientId]);
 };
