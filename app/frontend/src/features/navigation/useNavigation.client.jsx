@@ -59,9 +59,13 @@ export default function useNavigationClient() {
         const response = await fetch(`${BACK_ENDPOINT}/api/auth/user`, {
           credentials: 'include',
         });
-        if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
           applyState(null);
           return;
+        }
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error?.error ?? 'No se pudo obtener el usuario actual');
         }
         const user = await response.json();
         applyState(user);
