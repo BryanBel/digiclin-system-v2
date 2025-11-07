@@ -10,6 +10,10 @@ import usersRepository from '../users/users.repository.js';
 import { ErrorWithStatus } from '../../utils/errorTypes.js';
 import { authenticateUser } from './auth.middlewares.js';
 import resend from '../../services/resend.js';
+import {
+  assignUserToAppointmentRequests,
+  ensurePatientAndLinkRequestsForEmail,
+} from '../appointment_requests/appointment_requests.repository.js';
 const authRouter = express.Router();
 
 authRouter.post('/register', async (req, res) => {
@@ -28,6 +32,22 @@ authRouter.post('/register', async (req, res) => {
     fullName: normalizedFullName,
     role: normalizedRole,
   });
+
+  try {
+    if (normalizedRole === 'patient') {
+      await assignUserToAppointmentRequests({ email, userId: newUser.id });
+      await ensurePatientAndLinkRequestsForEmail({
+        email,
+        fullName: normalizedFullName,
+      });
+    }
+  } catch (linkError) {
+    console.error('Error linking user with appointment requests:', {
+      email,
+      userId: newUser.id,
+      message: linkError.message,
+    });
+  }
 
   const verificationToken = jwt.sign(
     { id: newUser.id, email: newUser.email },
