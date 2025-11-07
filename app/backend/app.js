@@ -52,34 +52,95 @@ export const createAndConfigureApp = async () => {
   app.use('/api/appointments', appointmentsRouter);
 
   app.use((err, req, res, _next) => {
-    console.log(err);
+    const sanitizePayload = (payload, depth = 0) => {
+      if (!payload || typeof payload !== 'object') return payload;
+
+      if (depth > 2) return '[truncated]';
+
+      if (Array.isArray(payload)) {
+        return payload.slice(0, 5).map((item) => sanitizePayload(item, depth + 1));
+      }
+
+      return Object.entries(payload).reduce((acc, [key, value]) => {
+        const normalizedKey = key.toLowerCase();
+        if (/(password|token|secret|authorization)/.test(normalizedKey)) {
+          acc[key] = '[redacted]';
+        } else {
+          acc[key] = sanitizePayload(value, depth + 1);
+        }
+        return acc;
+      }, {});
+    };
+
+    const errorSummary = {
+      status: 500,
+      message: 'Ocurrió un error inesperado. Inténtalo nuevamente más tarde.',
+      details: undefined,
+    };
 
     if (err instanceof ZodError) {
-      const messages = err.issues.map((zodError) => zodError.message);
-      const message = messages.join(',\n');
-      return res.status(400).json({ error: message });
-    }
-
-    if (err instanceof ErrorWithStatus) {
-      return res.status(err.status).json({ error: err.message });
-    }
-
-    if (err instanceof DatabaseError) {
+      errorSummary.status = 400;
+      const validationDetails = err.issues.map((issue) => ({
+        path: issue.path.join('.') || '(root)',
+        message: issue.message,
+        code: issue.code,
+      }));
+      errorSummary.details = validationDetails;
+      errorSummary.message =
+        validationDetails.map((detail) => detail.message).join(' | ') ||
+        'La información enviada no es válida.';
+    } else if (err instanceof ErrorWithStatus) {
+      errorSummary.status = err.status ?? 500;
+      errorSummary.message = err.message ?? errorSummary.message;
+      errorSummary.details = err.details ?? undefined;
+    } else if (err instanceof DatabaseError) {
       if (err.code === '22P02') {
-        return res.status(400).json({ error: 'Hubo un error. Contacte al administrador' });
+        errorSummary.status = 400;
+        errorSummary.message = 'Formato de dato no válido.';
+      } else if (err.code === '23505') {
+        errorSummary.status = 400;
+        errorSummary.message = 'El correo ya está en uso. Por favor intenta con otro.';
+        errorSummary.details = err.detail ?? undefined;
       }
-      if (err.code === '23505') {
-        return res
-          .status(400)
-          .json({ error: 'El correo ya esta en uso. Por favor intente con otro.' });
-      }
+    } else if (err instanceof jwt.JsonWebTokenError) {
+      errorSummary.status = 401;
+      errorSummary.message = 'Token inválido o expirado.';
     }
 
-    if (err instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ error: 'Token inválido o expirado.' });
+    const logPayload = {
+      method: req.method,
+      path: req.originalUrl,
+      status: errorSummary.status,
+      message: errorSummary.message,
+      errorName: err.name,
+    };
+
+    if (res.locals.user?.id) logPayload.userId = res.locals.user.id;
+
+    if (req.query && Object.keys(req.query).length > 0) {
+      logPayload.query = sanitizePayload(req.query);
     }
 
-    res.status(500).json({ error: 'HUBO UN ERROR' });
+    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+      logPayload.body = sanitizePayload(req.body);
+    }
+
+    if (errorSummary.details !== undefined) {
+      logPayload.details = sanitizePayload(errorSummary.details);
+    }
+
+    if (process.env.NODE_ENV !== 'prod' && err.stack) {
+      logPayload.stack = err.stack;
+    }
+
+    console.error('[API ERROR]', logPayload);
+
+    const responsePayload = { error: errorSummary.message };
+    if (errorSummary.details !== undefined) {
+      responsePayload.details = errorSummary.details;
+    }
+
+    res.status(errorSummary.status).json(responsePayload);
   });
 
   if (process.env.NODE_ENV === 'prod') {
