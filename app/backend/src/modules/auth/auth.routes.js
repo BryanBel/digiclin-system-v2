@@ -35,37 +35,26 @@ authRouter.post('/register', async (req, res) => {
     { expiresIn: '1h' },
   );
 
-  // Prioriza una URL pública explícita y usa CORS_ORIGIN como respaldo para entornos locales.
   const backendUrl = process.env.BACKEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000';
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
-  // Intenta enviar el email con un timeout de 10 segundos
-  try {
-    const emailPromise = nodemailerService.sendMail({
+  res.status(201).json({
+    message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
+  });
+
+  nodemailerService
+    .sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Verifica tu correo',
       html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
+    })
+    .then(() => {
+      console.log(`Verification email sent successfully to ${email}`);
+    })
+    .catch((error) => {
+      console.error('Error sending verification email:', error);
     });
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Email timeout')), 10000),
-    );
-
-    await Promise.race([emailPromise, timeoutPromise]);
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    // El usuario ya está registrado, pero notificamos que hubo un problema con el email
-    return res.status(201).json({
-      message:
-        'Usuario registrado exitosamente, pero hubo un problema al enviar el correo de verificación. Por favor, contacta al administrador.',
-      emailError: true,
-    });
-  }
-
-  return res.status(201).json({
-    message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
-  });
 });
 
 authRouter.get('/verify-email/:token', async (req, res) => {
