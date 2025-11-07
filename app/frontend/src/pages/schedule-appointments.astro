@@ -127,12 +127,13 @@ const isLoggedIn = Boolean(user);
   const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const rawProvidedEndpoint = (env.PUBLIC_BACKEND_URL ?? "").trim();
-  const devFallback = env.DEV === false ? "" : "http://localhost:3000";
+  const isDev = env.DEV === true || env.DEV === "true" || env.MODE === "development";
+  const devFallback = isDev ? "http://localhost:3000" : "";
   const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null"
     ? runtimeOrigin
     : "";
 
-  let baseEndpoint = rawProvidedEndpoint || devFallback || runtimeFallback;
+  let baseEndpoint = rawProvidedEndpoint || runtimeFallback || devFallback;
 
   if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
     baseEndpoint = "http://localhost:3000";
