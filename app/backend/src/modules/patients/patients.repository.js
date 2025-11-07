@@ -197,3 +197,34 @@ export const ensurePatientFromRequest = async ({
     db,
   );
 };
+
+export const ensurePatientForUserRegistration = async ({ email, fullName }, client) => {
+  if (!email) return null;
+
+  const db = getClient(client);
+  const existing = await findPatientByDocumentOrEmail({ email }, db);
+
+  const normalizedName = (fullName ?? '').trim() || email.split('@')[0] || email;
+
+  if (existing) {
+    const needsUpdate = normalizedName && normalizedName !== existing.full_name;
+    if (needsUpdate) {
+      return updatePatient(
+        {
+          id: existing.id,
+          fullName: normalizedName,
+        },
+        db,
+      );
+    }
+    return existing;
+  }
+
+  return createPatient(
+    {
+      fullName: normalizedName,
+      email,
+    },
+    db,
+  );
+};
