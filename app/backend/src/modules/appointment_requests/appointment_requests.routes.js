@@ -16,6 +16,7 @@ import {
 import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
 import resend from '../../services/resend.js';
 import usersRepository from '../users/users.repository.js';
+import { buildFrontendUrl } from '../../utils/urlHelpers.js';
 
 const router = Router();
 
@@ -34,10 +35,11 @@ router.post('/', async (req, res, next) => {
     const payload = createAppointmentRequestSchema.parse(req.body);
     const { request, linkToken } = await createAppointmentRequest(payload);
 
-    const frontendUrl = process.env.FRONTEND_BASE_URL ?? 'http://localhost:4321';
-    const confirmationLink = linkToken
-      ? `${frontendUrl}/link-appointment?token=${linkToken}`
-      : `${frontendUrl}/login`;
+    const signupLink = buildFrontendUrl('/signup', { email: payload.email });
+    const loginLink = buildFrontendUrl('/login');
+    const linkAppointmentUrl = linkToken
+      ? buildFrontendUrl('/link-appointment', { token: linkToken })
+      : null;
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
@@ -49,9 +51,10 @@ router.post('/', async (req, res, next) => {
         `Hola ${payload.fullName},`,
         '',
         'Hemos recibido tu solicitud de cita.',
-        linkToken
-          ? `Si ya eres paciente, confirma tu cuenta y vincula la cita aquí: ${confirmationLink}`
-          : `Puedes gestionar tu cita iniciando sesión aquí: ${confirmationLink}`,
+        `Crea tu cuenta para seguir tu solicitud aquí: ${signupLink}`,
+        linkAppointmentUrl
+          ? `Si ya tienes cuenta, confirma y vincula tu cita aquí: ${linkAppointmentUrl}`
+          : `Si ya tienes cuenta, inicia sesión aquí: ${loginLink}`,
         '',
         'El equipo de DigiClin.',
       ].join('\n'),
@@ -101,8 +104,6 @@ router.post('/:id/confirm', async (req, res, next) => {
       createdByUser: res.locals.user?.id ?? null,
     });
 
-    const frontendUrl = process.env.FRONTEND_BASE_URL ?? 'http://localhost:4321';
-
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const scheduledForText =
       payload.scheduledFor instanceof Date
@@ -120,7 +121,7 @@ router.post('/:id/confirm', async (req, res, next) => {
         `Fecha y hora: ${scheduledForText}`,
         `Doctor asignado: ${doctorEmail}`,
         '',
-        `Puedes consultar tu cita aquí: ${frontendUrl}/login`,
+        `Puedes consultar tu cita aquí: ${buildFrontendUrl('/login')}`,
         '',
         'El equipo de DigiClin.',
       ].join('\n'),
