@@ -59,7 +59,7 @@ authRouter.post('/register', async (req, res) => {
 
 authRouter.get('/verify-email/:token', async (req, res) => {
   const { token } = verifyEmailRouteSchema.params.parse(req.params);
-  const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:4321'; // URL del frontend
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4321'; // URL del frontend
 
   try {
     const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
