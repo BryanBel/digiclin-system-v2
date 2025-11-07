@@ -1,4 +1,6 @@
 import { createTransport } from 'nodemailer';
+
+console.log(process.env.EMAIL_USER, process.env.EMAIL_PASS);
 const nodemailerService = createTransport({
   host: 'smtp.gmail.com',
   port: 465,
