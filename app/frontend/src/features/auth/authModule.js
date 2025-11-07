@@ -1,35 +1,32 @@
-import ky from "ky";
-import { BACK_ENDPOINT } from "../../config/endpoint.js";
 import { atom } from "nanostores";
+import apiClient from "../../utils/apiClient.js";
 
 export const user = atom(null);
 
 const login = async ({email, password}) => {
-  const response = await ky.post(`${BACK_ENDPOINT}/api/auth/login`, {
-    json: {email, password},
-    credentials: 'include'
+  const response = await apiClient.post('/api/auth/login', {
+    json: {email, password}
   });
   const userData = await response.json();
   user.set(userData);
 }
 
 const register = async ({ email, password, fullName, role }) => {
-  const response = await ky.post(`${BACK_ENDPOINT}/api/auth/register`, {
-    json: { email, password, fullName, role },
-    credentials: 'include'
+  const response = await apiClient.post('/api/auth/register', {
+    json: { email, password, fullName, role }
   });
   // Cuando se registra el backend envia un mensaje
   return await response.json();
 }
 
 const getLoggedUser = async () => {
-  const data = await ky.get(`${BACK_ENDPOINT}/api/auth/user`, {credentials: 'include'}).json();
+  const data = await apiClient.get('/api/auth/user').json();
   user.set(data);  
   return data;
 }
 
 const logoutUser = async () => {
-  await ky.get(`${BACK_ENDPOINT}/api/auth/logout`, {credentials: 'include'});
+  await apiClient.get('/api/auth/logout');
 }
 
 const AuthModule = { login, register, getLoggedUser, logoutUser };
