@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { findPatientById, listPatients, updatePatient } from './patients.repository.js';
+import {
+  findPatientById,
+  listPatients,
+  updatePatient,
+  ensurePatientForUserRegistration,
+} from './patients.repository.js';
+import { mapPatientProfile } from './patients.mappers.js';
 import { calculateAge, parseDateInput } from '../../utils/dateHelpers.js';
 
 const router = Router();
@@ -17,7 +23,7 @@ const updatePatientSchema = z
     phone: z.string().min(6).max(32).optional(),
     email: z.string().email().optional(),
     documentId: z.string().min(3).max(64).optional(),
-    gender: z.enum(['male', 'female', 'other']).optional(),
+    gender: z.enum(['male', 'female']).optional(),
     birthDate: z
       .string()
       .refine((value) => !value || !Number.isNaN(Date.parse(value)), 'Fecha de nacimiento inválida')
@@ -60,6 +66,28 @@ router.get('/', async (req, res, next) => {
     const query = listPatientsSchema.parse(req.query);
     const patients = await listPatients(query);
     res.json({ patients });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/me', async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'No estás autenticado.' });
+    }
+
+    if (user.role !== 'patient') {
+      return res.status(403).json({ error: 'Acceso restringido para este recurso.' });
+    }
+
+    const patient = await ensurePatientForUserRegistration({
+      email: user.email,
+      fullName: user.full_name ?? user.fullName ?? undefined,
+    });
+
+    res.json({ patient: mapPatientProfile(patient) });
   } catch (error) {
     next(error);
   }

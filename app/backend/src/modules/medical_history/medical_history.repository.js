@@ -1,4 +1,8 @@
 import pool from '../../db/pool.js';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { listAttachmentsForMedicalHistories } from './medical_history.attachments.repository.js';
 
 const BASE_SELECT = `
   SELECT
@@ -21,6 +25,115 @@ const BASE_SELECT = `
   LEFT JOIN users u ON u.id = mh.doctor_id
 `;
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const backendRoot = path.join(moduleDir, '../../..');
+const publicDir = path.join(backendRoot, 'public');
+
+const normalizeRelativePath = (candidate) => {
+  if (!candidate) return '';
+  return candidate.replace(/^\/+/, '').replace(/\\+/g, '/');
+};
+
+const buildPublicUrl = (relativePath) => `/${normalizeRelativePath(relativePath)}`;
+
+const resolveAttachmentAbsolutePath = (relativePath) => {
+  const segments = normalizeRelativePath(relativePath)
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  return path.join(publicDir, ...segments);
+};
+
+const mapAttachmentRowToResponse = async (row) => {
+  if (!row) return null;
+  const relativePath = normalizeRelativePath(row.filepath);
+  const absolutePath = resolveAttachmentAbsolutePath(relativePath);
+
+  let size = null;
+  try {
+    const stats = await fs.stat(absolutePath);
+    size = stats.size ?? null;
+  } catch (error) {
+    console.warn('No se pudo obtener el tamaño del adjunto:', relativePath, error.message);
+  }
+
+  return {
+    id: row.id,
+    name: row.filename,
+    filename: row.filename,
+    mimetype: row.mimetype,
+    createdAt:
+      row.created_at instanceof Date ? row.created_at.toISOString() : (row.created_at ?? null),
+    size,
+    url: buildPublicUrl(relativePath),
+    filepath: relativePath,
+    medicalHistoryId: row.medical_history_id,
+  };
+};
+
+const hydrateAttachments = async (entries) => {
+  if (!Array.isArray(entries) || !entries.length) {
+    return entries;
+  }
+
+  const ids = entries
+    .map((entry) => entry?.id)
+    .filter((id) => typeof id === 'number' && Number.isInteger(id));
+
+  if (!ids.length) {
+    return entries.map((entry) => ({ ...entry, attachments: [] }));
+  }
+
+  const attachmentsByHistory = await listAttachmentsForMedicalHistories({ ids });
+
+  const enriched = await Promise.all(
+    entries.map(async (entry) => {
+      const rawAttachments = attachmentsByHistory.get(entry.id) ?? [];
+      const mapped = await Promise.all(
+        rawAttachments.map((raw) => mapAttachmentRowToResponse(raw)),
+      );
+      return {
+        ...entry,
+        attachments: mapped.filter(Boolean),
+      };
+    }),
+  );
+
+  return enriched;
+};
+
+const resolveVisitId = async (visitId) => {
+  if (visitId === null || visitId === undefined) {
+    return null;
+  }
+
+  if (typeof visitId === 'string' && !visitId.trim()) {
+    return null;
+  }
+
+  if (visitId === 'null' || visitId === 'undefined') {
+    return null;
+  }
+
+  const numericId = Number(visitId);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    const error = new Error('La visita asociada no es válida.');
+    error.status = 400;
+    throw error;
+  }
+
+  const { rows } = await pool.query('SELECT id FROM visits WHERE id = $1 LIMIT 1', [numericId]);
+  const existing = rows?.[0]?.id ?? null;
+
+  if (!existing) {
+    const error = new Error('La visita asociada no existe o ya fue eliminada.');
+    error.status = 400;
+    throw error;
+  }
+
+  return existing;
+};
+
 const mapMedicalHistoryRow = (row) => {
   if (!row) return null;
 
@@ -39,6 +152,7 @@ const mapMedicalHistoryRow = (row) => {
     patient_phone: row.patient_phone ?? null,
     doctor_name: row.doctor_name ?? null,
     doctor_email: row.doctor_email ?? null,
+    attachments: [],
   };
 };
 
@@ -86,13 +200,16 @@ export const listMedicalHistoryEntries = async ({ search, patientId, limit = 50,
   `;
 
   const { rows } = await pool.query(query, params);
-  return rows.map(mapMedicalHistoryRow);
+  const mapped = rows.map(mapMedicalHistoryRow);
+  return hydrateAttachments(mapped);
 };
 
 export const findMedicalHistoryById = async ({ id }) => {
   const query = `${BASE_SELECT} WHERE mh.id = $1`;
   const { rows } = await pool.query(query, [id]);
-  return mapMedicalHistoryRow(rows[0]);
+  const mapped = mapMedicalHistoryRow(rows[0]);
+  const [withAttachments] = await hydrateAttachments(mapped ? [mapped] : []);
+  return withAttachments ?? null;
 };
 
 export const createMedicalHistoryEntry = async ({
@@ -104,6 +221,8 @@ export const createMedicalHistoryEntry = async ({
   doctorId,
   visitId,
 }) => {
+  const resolvedVisitId = await resolveVisitId(visitId);
+
   const insertQuery = `
     INSERT INTO medical_history (
       entry_date,
@@ -125,7 +244,7 @@ export const createMedicalHistoryEntry = async ({
     recipe ?? null,
     patientId,
     doctorId ?? null,
-    visitId ?? null,
+    resolvedVisitId,
   ];
 
   const { rows } = await pool.query(insertQuery, insertParams);
@@ -171,8 +290,9 @@ export const updateMedicalHistoryEntry = async ({
   }
 
   if (visitId !== undefined) {
+    const resolvedVisitId = visitId === null ? null : await resolveVisitId(visitId);
     fields.push(`visit_id = $${paramIndex}`);
-    params.push(visitId ?? null);
+    params.push(resolvedVisitId);
     paramIndex += 1;
   }
 

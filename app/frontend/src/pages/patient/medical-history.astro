@@ -1,0 +1,151 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import medicalHistoryClient from './medical-history.client.js?url';
+
+const locals = Astro.locals as { user?: { role?: string } };
+const user = locals.user ?? null;
+
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+if (user.role !== 'patient') {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="DigiClin | Mi historial médico">
+  <section class="patient-shell">
+    <header class="patient-header">
+      <h1>Historial médico</h1>
+      <p class="patient-subtitle">
+        Revisa las notas clínicas registradas por tus profesionales de salud.
+      </p>
+    </header>
+
+    <div class="patient-card">
+      <div class="patient-table-wrapper">
+        <table class="patient-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Profesional</th>
+              <th>Motivo / Informe</th>
+              <th>Tratamiento</th>
+              <th>Receta</th>
+            </tr>
+          </thead>
+          <tbody data-patient-history>
+            <tr class="patient-empty">
+              <td colspan="5">Cargando historial...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .patient-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+
+  .patient-header {
+    display: grid;
+    gap: 0.65rem;
+    text-align: center;
+  }
+
+  .patient-header h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.4rem);
+  }
+
+  .patient-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1rem;
+  }
+
+  .patient-card {
+    background: var(--color-admin-surface);
+    border: 1px solid var(--color-admin-border);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: var(--shadow-card);
+  }
+
+  .patient-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .patient-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .patient-table th,
+  .patient-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-admin-border);
+    vertical-align: top;
+  }
+
+  .patient-table th {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-admin-table-header);
+  }
+
+  .patient-empty td {
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .patient-empty--error td {
+    color: #b91c1c;
+  }
+
+  .patient-history__doctor {
+    font-weight: 600;
+  }
+
+  .patient-history__doctor-meta {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .patient-history__text {
+    display: grid;
+    gap: 0.35rem;
+    white-space: pre-wrap;
+  }
+
+  .patient-history__placeholder {
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  @media (max-width: 640px) {
+    .patient-table th,
+    .patient-table td {
+      padding: 0.65rem;
+    }
+  }
+</style>
+
+<script type="module" src={medicalHistoryClient}></script>

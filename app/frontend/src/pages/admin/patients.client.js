@@ -77,7 +77,7 @@ const formatDateOnly = (value) => {
 const renderTable = () => {
   if (!state.patients.length) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty">
         <td colspan="6">No se encontraron pacientes.</td>
       </tr>
     `;
@@ -87,35 +87,58 @@ const renderTable = () => {
   tableBody.innerHTML = state.patients
     .map((patient) => {
       const computedAge = patient.age ?? calculateAge(patient.birth_date);
+      const fullName = patient.full_name ?? 'Sin nombre';
+      const birthLabel = patient.birth_date
+        ? `Nacimiento: ${formatDateOnly(patient.birth_date)}`
+        : '';
+      const genderLabel = patient.gender
+        ? `Género: ${GENDER_LABELS[patient.gender] ?? patient.gender}`
+        : '';
+      const documentLabel = patient.document_id ?? 'Sin documento';
+      const emailLabel = patient.email ?? 'Sin correo';
+      const phoneLabel = patient.phone ?? 'Sin teléfono';
+      const ageLabel =
+        typeof computedAge === 'number' ? `${computedAge} años` : 'Sin registro';
+      const lastAppointment = formatDateTime(patient.last_appointment_at);
+      const appointmentsCount = patient.appointments_count ?? 0;
+
       return `
-        <tr class="admin-patient-row" data-patient-row="${patient.id}">
+        <tr class="records-row records-row--patient" data-patient-row="${patient.id}">
           <td>
-            <div class="admin-cell admin-cell--person">
-              <strong>${patient.full_name}</strong>
-              <div class="admin-patient-meta">
-                ${patient.birth_date ? `<span>Nacimiento: ${formatDateOnly(patient.birth_date)}</span>` : ''}
-                ${patient.gender ? `<span>Género: ${GENDER_LABELS[patient.gender] ?? patient.gender}</span>` : ''}
+            <div class="records-entry">
+              <div class="records-entry-header">
+                <span class="records-entry-title">${fullName}</span>
               </div>
-              <div class="admin-row-hint">EDITAR</div>
+              ${birthLabel ? `<span class="records-entry-line records-entry-line--muted">${birthLabel}</span>` : ''}
+              ${genderLabel ? `<span class="records-entry-line records-entry-line--muted">${genderLabel}</span>` : ''}
+              <span class="admin-row-hint">Editar ficha</span>
             </div>
           </td>
           <td>
-            <div class="admin-cell">${patient.document_id ?? 'Sin documento'}</div>
-          </td>
-          <td>
-            <div class="admin-cell admin-cell--stack">
-              <div>${patient.email ?? 'Sin correo'}</div>
-              <div>${patient.phone ?? 'Sin teléfono'}</div>
+            <div class="records-entry">
+              <span class="records-entry-line">${documentLabel}</span>
             </div>
           </td>
           <td>
-            <div class="admin-cell">${typeof computedAge === 'number' ? `${computedAge} años` : 'Sin registro'}</div>
+            <div class="records-entry">
+              <span class="records-entry-line">${emailLabel}</span>
+              <span class="records-entry-line records-entry-line--muted">${phoneLabel}</span>
+            </div>
           </td>
           <td>
-            <div class="admin-cell">${formatDateTime(patient.last_appointment_at)}</div>
+            <div class="records-entry">
+              <span class="records-entry-line">${ageLabel}</span>
+            </div>
           </td>
           <td>
-            <div class="admin-cell">${patient.appointments_count ?? 0}</div>
+            <div class="records-entry">
+              <span class="records-entry-line">${lastAppointment}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <span class="records-badge records-badge--patient">${appointmentsCount} cita${appointmentsCount === 1 ? '' : 's'}</span>
+            </div>
           </td>
         </tr>
       `;
@@ -179,7 +202,7 @@ const closePanel = () => {
 
 const loadPatients = async () => {
   tableBody.innerHTML = `
-    <tr class="admin-empty">
+    <tr class="records-empty">
       <td colspan="6">Cargando pacientes...</td>
     </tr>
   `;
@@ -217,7 +240,7 @@ const loadPatients = async () => {
     }
   } catch (error) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty">
         <td colspan="6">${error.message}</td>
       </tr>
     `;
@@ -255,7 +278,7 @@ const handleFormSubmit = async (event) => {
         gender: gender || undefined,
         phone: phone || undefined,
         email: email || undefined,
-  age: typeof computedAge === 'number' ? computedAge : undefined,
+        age: typeof computedAge === 'number' ? computedAge : undefined,
       }),
     });
 

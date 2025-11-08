@@ -35,8 +35,8 @@ const canEdit = isDoctor;
           </button>
         </div>
 
-        <div class="admin-table-wrapper">
-          <table class="admin-table admin-table--history">
+        <div class="records-table-wrapper">
+          <table class="records-table records-table--history">
             <thead>
               <tr>
                 <th>Paciente</th>
@@ -48,7 +48,7 @@ const canEdit = isDoctor;
               </tr>
             </thead>
             <tbody data-history-body>
-              <tr class="admin-empty">
+              <tr class="records-empty">
                 <td colspan="6">Cargando historial clínico...</td>
               </tr>
             </tbody>
@@ -109,6 +109,24 @@ const canEdit = isDoctor;
               <dd data-history-meta-phone>-</dd>
             </div>
           </dl>
+
+          <div class="admin-panel__attachments" data-history-attachments-meta hidden>
+            <div class="admin-panel__attachments-info">
+              <span class="admin-panel__attachments-count" data-history-attachments-count>
+                Sin archivos adjuntos
+              </span>
+              <span class="admin-panel__attachments-hint">
+                Consulta y descarga archivos desde el visor dedicado.
+              </span>
+            </div>
+            <button
+              type="button"
+              class="admin-button admin-button--secondary admin-button--compact"
+              data-open-history-attachments
+            >
+              Ver archivos adjuntos
+            </button>
+          </div>
         </div>
 
         <section class="history-timeline" data-history-timeline hidden>
@@ -149,6 +167,18 @@ const canEdit = isDoctor;
             <textarea name="recipe" rows="3" data-history-recipe></textarea>
           </label>
 
+          <div class="admin-field admin-field--attachments" data-history-attachments-field>
+            <span>Archivos adjuntos</span>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,image/png,image/jpeg"
+              data-history-attachments-input
+            />
+            <p class="admin-field__hint">PDF, PNG o JPG. Máximo 5 archivos de hasta 10MB.</p>
+            <ul class="attachments-preview" data-history-attachments-preview></ul>
+          </div>
+
           <p id="history-feedback" class="admin-feedback" role="status"></p>
 
           <div class="admin-actions" data-history-actions>
@@ -166,6 +196,58 @@ const canEdit = isDoctor;
           </div>
         </form>
       </aside>
+    </div>
+
+    <div class="history-attachments-overlay" data-history-attachments-overlay hidden>
+      <div class="history-attachments-overlay__backdrop" data-close-history-attachments></div>
+      <section class="history-attachments-overlay__content" role="dialog" aria-modal="true">
+        <header class="history-attachments-overlay__header">
+          <div>
+            <h3>Archivos adjuntos</h3>
+            <span data-history-attachments-overlay-count>0 archivos</span>
+          </div>
+          <button
+            type="button"
+            class="admin-button admin-button--ghost admin-button--compact"
+            data-close-history-attachments
+          >
+            Cerrar
+          </button>
+        </header>
+        <div class="history-attachments-overlay__body">
+          <ul class="history-attachments-overlay__list" data-history-attachments-items></ul>
+          <div class="history-attachments-overlay__preview">
+            <p class="history-attachments-overlay__placeholder" data-history-attachments-preview-empty>
+              Selecciona un archivo para ver la vista previa.
+            </p>
+            <div
+              class="history-attachments-overlay__preview-canvas"
+              data-history-attachments-preview-canvas
+            ></div>
+            <div
+              class="history-attachments-overlay__preview-actions"
+              data-history-attachments-preview-actions
+              hidden
+            >
+              <a
+                class="admin-button admin-button--ghost admin-button--compact"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-history-attachments-preview-open
+              >
+                Ver en pestaña nueva
+              </a>
+              <a
+                class="admin-button admin-button--primary admin-button--compact"
+                data-history-attachments-preview-download
+                download
+              >
+                Descargar
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </section>
 </Layout>
@@ -231,40 +313,6 @@ const canEdit = isDoctor;
     min-height: 100%;
   }
 
-  .admin-table-wrapper {
-    overflow-x: auto;
-    border-radius: 1rem;
-  }
-
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--color-admin-border);
-  }
-
-  .admin-table tbody tr:hover {
-    background: var(--color-admin-row-hover);
-  }
-
-  .admin-table th {
-    font-weight: 600;
-    color: var(--color-admin-table-header);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-  }
-
-  :global(.admin-empty td) {
-    text-align: center;
-    color: var(--color-muted);
-  }
-
   .admin-panel__description {
     margin: 0.5rem 0 1.25rem;
     color: var(--color-muted);
@@ -298,49 +346,45 @@ const canEdit = isDoctor;
     flex: 0 0 auto;
   }
 
-  .admin-table--history th,
-  .admin-table--history td {
-    text-align: center;
-    vertical-align: top;
-  }
-
-  .admin-table--history tbody tr {
-    cursor: pointer;
-  }
-
-  .admin-table--history tbody tr.admin-history-row {
-    position: relative;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.1));
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-  }
-
-  .admin-table--history tbody tr.admin-history-row:nth-child(even) {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.14));
-  }
-
-  .admin-table--history tbody tr.admin-history-row:hover,
-  .admin-table--history tbody tr.admin-history-row:focus-within {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.28));
-    box-shadow: 0 18px 38px -18px rgba(37, 99, 235, 0.45);
-    transform: translateY(-1px);
-  }
-
-  .admin-history-summary {
-    display: grid;
-    gap: 0.4rem;
-    justify-items: start;
+  :global(.records-table--history thead th:first-child),
+  :global(.records-table--history tbody td:first-child) {
     text-align: left;
   }
 
-  .admin-history-summary strong {
-    font-size: 1rem;
+  :global(.records-table--history thead th:nth-child(2)),
+  :global(.records-table--history tbody td:nth-child(2)),
+  :global(.records-table--history thead th:nth-child(6)),
+  :global(.records-table--history tbody td:nth-child(6)) {
+    text-align: center;
   }
 
-  .admin-history-meta {
-    display: grid;
-    gap: 0.2rem;
-    font-size: 0.8rem;
-    color: var(--color-muted);
+  :global(.records-table--history thead th:nth-child(3)),
+  :global(.records-table--history tbody td:nth-child(3)),
+  :global(.records-table--history thead th:nth-child(4)),
+  :global(.records-table--history tbody td:nth-child(4)),
+  :global(.records-table--history thead th:nth-child(5)),
+  :global(.records-table--history tbody td:nth-child(5)) {
+    text-align: left;
+  }
+
+  :global(.records-table--history tbody td) {
+    vertical-align: top;
+  }
+
+  :global(.records-row--history) {
+    cursor: pointer;
+  }
+
+  :global(.records-row--history td:first-child .records-entry),
+  :global(.records-row--history td:nth-child(3) .records-entry),
+  :global(.records-row--history td:nth-child(4) .records-entry),
+  :global(.records-row--history td:nth-child(5) .records-entry) {
+    justify-items: flex-start;
+  }
+
+  :global(.records-row--history td:nth-child(2) .records-entry),
+  :global(.records-row--history td:nth-child(6) .records-entry) {
+    justify-items: center;
   }
 
   .admin-history-text {
@@ -384,6 +428,35 @@ const canEdit = isDoctor;
     justify-items: center;
   }
 
+  .admin-panel__attachments {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.2));
+    border-radius: 0.85rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid rgba(37, 99, 235, 0.25);
+  }
+
+  .admin-panel__attachments-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .admin-panel__attachments-count {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    letter-spacing: 0.01em;
+  }
+
+  .admin-panel__attachments-hint {
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.7);
+  }
+
   .admin-panel--history .admin-panel__meta-row > div {
     display: grid;
     gap: 0.35rem;
@@ -402,31 +475,303 @@ const canEdit = isDoctor;
     font-weight: 600;
   }
 
-  .history-timeline {
+  .admin-field--attachments input[type='file'] {
+    width: 100%;
+    border: 1px dashed var(--color-admin-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.02);
+    cursor: pointer;
+  }
+
+  .admin-field__hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+
+  .attachments-preview {
+    list-style: none;
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+  }
+
+  .attachments-preview__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .attachments-preview__meta {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .attachments-preview__name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    word-break: break-word;
+  }
+
+  .attachments-preview__info {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .history-attachments-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    z-index: 1200;
+    isolation: isolate;
+  }
+
+  .history-attachments-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+  }
+
+  .history-attachments-overlay__content {
+    position: relative;
+    width: min(900px, 92vw);
+    max-height: 90vh;
+    background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 55%),
+      var(--color-admin-surface);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 32px 64px -36px rgba(15, 23, 42, 0.45);
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    display: grid;
+    gap: 1.5rem;
+    z-index: 1;
+  }
+
+  .history-attachments-overlay__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.14);
+  }
+
+  .history-attachments-overlay__header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .history-attachments-overlay__header > div {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  [data-history-attachments-overlay-count] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.14);
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .history-attachments-overlay__body {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 1.5rem;
+  }
+
+  .history-attachments-overlay__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+    overflow-y: auto;
+    max-height: 60vh;
+    padding-right: 0.35rem;
+  }
+
+  .history-attachments-overlay__item-button {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 1rem;
+    padding: 0.9rem 1.1rem;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+      background 0.2s ease;
+    color: inherit;
+    box-shadow: 0 14px 28px -24px rgba(15, 23, 42, 0.4);
+  }
+
+  .history-attachments-overlay__item-button:hover,
+  .history-attachments-overlay__item-button:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 36px -22px rgba(37, 99, 235, 0.5);
+    border-color: rgba(37, 99, 235, 0.45);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(96, 165, 250, 0.1));
+  }
+
+  .history-attachments-overlay__item-button--active {
+    border-color: rgba(37, 99, 235, 0.55);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.24), rgba(96, 165, 250, 0.16));
+    box-shadow: 0 22px 42px -24px rgba(37, 99, 235, 0.55);
+    border-left-color: rgba(37, 99, 235, 0.9);
+  }
+
+  .history-attachments-overlay__item-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    word-break: break-word;
+    color: var(--records-text-strong);
+    letter-spacing: 0.01em;
+  }
+
+  .history-attachments-overlay__item-content {
+    display: grid;
+    gap: 0.3rem;
+    flex: 1 1 auto;
+  }
+
+  .history-attachments-overlay__item-meta {
+    font-size: 0.78rem;
+    color: rgba(15, 23, 42, 0.7);
+    letter-spacing: 0.02em;
+  }
+
+  .history-attachments-overlay__item-button::after {
+    content: '↗';
+    font-size: 0.9rem;
+    color: #1d4ed8;
+    font-weight: 700;
+    margin-left: 0.75rem;
+  }
+
+  .history-attachments-overlay__item-button--active::after {
+    color: #1e3a8a;
+  }
+
+  .history-attachments-overlay__item-button--active .history-attachments-overlay__item-title {
+    color: #1e3a8a;
+  }
+
+  .history-attachments-overlay__preview {
     display: grid;
     gap: 1rem;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 1.1rem;
+    padding: 1.15rem;
+    min-height: 260px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .history-attachments-overlay__preview-canvas {
+    min-height: 200px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 0.95rem;
+    background: rgba(15, 23, 42, 0.04);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .history-attachments-overlay__preview-canvas img,
+  .history-attachments-overlay__preview-canvas iframe,
+  .history-attachments-overlay__preview-canvas embed {
+    width: 100%;
+    height: 100%;
+    border: none;
+    object-fit: contain;
+    background: var(--color-admin-surface);
+    border-radius: 0.95rem;
+    box-shadow: 0 16px 38px -26px rgba(15, 23, 42, 0.55);
+  }
+
+  .history-attachments-overlay__placeholder {
+    margin: 0;
+    font-size: 0.88rem;
+    color: rgba(15, 23, 42, 0.7);
+    background: rgba(255, 255, 255, 0.65);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  }
+
+  .history-attachments-overlay__preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .history-timeline {
+    display: grid;
+    gap: 1.25rem;
     background: rgba(37, 99, 235, 0.08);
     border: 1px solid rgba(37, 99, 235, 0.18);
-    border-radius: 0.9rem;
-    padding: 1.25rem 1.5rem;
+    border-radius: 1.2rem;
+    padding: 1.5rem;
+    box-shadow: 0 24px 48px -32px rgba(37, 99, 235, 0.45);
   }
 
   .history-timeline__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    background: var(--color-admin-surface);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 
   .history-timeline__header h3 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--records-text-strong);
+    letter-spacing: -0.01em;
   }
 
   .history-timeline__count {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.16);
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .history-timeline__list {
@@ -434,41 +779,243 @@ const canEdit = isDoctor;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
   .history-timeline__item {
+    position: relative;
+    border-radius: 1.1rem;
+    border: 1px solid var(--color-admin-border);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.1));
+    box-shadow: 0 18px 34px -24px rgba(37, 99, 235, 0.45);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    overflow: hidden;
+    padding: 1.15rem;
+  }
+
+  .history-timeline__item:hover,
+  .history-timeline__item:focus-within {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 48px -26px rgba(37, 99, 235, 0.55);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.24));
+  }
+
+  .history-timeline__item + .history-timeline__item::before {
+    content: '';
+    position: absolute;
+    top: -0.65rem;
+    left: 1rem;
+    right: 1rem;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0), rgba(148, 163, 184, 0.5), rgba(148, 163, 184, 0));
+  }
+
+  .history-timeline__grid {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  @media (min-width: 1080px) {
+    .history-timeline__grid {
+      grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.35fr) minmax(220px, 0.9fr);
+      align-items: start;
+    }
+  }
+
+  .history-timeline__cell {
+    padding: 1.2rem 1.4rem;
+    display: grid;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  @media (max-width: 1079px) {
+    .history-timeline__cell {
+      padding: 1rem 1.1rem;
+    }
+  }
+
+  .history-timeline__cell--meta {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.04));
+  }
+
+  .history-timeline__cell--details {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(37, 99, 235, 0.05));
+  }
+
+  .history-timeline__cell--attachments {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.04));
+  }
+
+  .history-timeline__entry {
+    justify-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .history-timeline__entry .records-entry-header {
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .history-timeline__entry .records-entry-title {
+    font-size: 1.05rem;
+  }
+
+  .history-timeline__entry .records-entry-line--muted {
+    font-size: 0.9rem;
+    color: var(--records-text-muted);
+  }
+
+  .history-timeline__details {
     display: grid;
     gap: 0.6rem;
-    background: var(--color-admin-surface);
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    border-radius: 0.85rem;
-    padding: 1rem 1.2rem;
-    box-shadow: 0 12px 22px -18px rgba(37, 99, 235, 0.35);
   }
 
-  .history-timeline__item-header {
+  .history-timeline__detail {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .history-timeline__detail dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--records-text-muted);
+    font-weight: 700;
+  }
+
+  .history-timeline__detail dd {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--records-text-strong);
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+
+  .history-timeline__attachments {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .history-timeline__attachments-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .history-timeline__attachments-empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.8rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    background: rgba(148, 163, 184, 0.16);
+    color: var(--records-text-muted);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .history-timeline__attachment-item {
+    display: block;
+  }
+
+  .history-timeline__attachment-chip {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    background: rgba(59, 130, 246, 0.12);
+    box-shadow: 0 16px 32px -24px rgba(37, 99, 235, 0.4);
+    width: 100%;
+  }
+
+  .history-timeline__attachment-name {
+    font-weight: 700;
     font-size: 0.9rem;
+    color: #0f172a;
+    word-break: break-word;
+    flex: 1 1 auto;
   }
 
-  .history-timeline__item-header strong {
-    font-size: 0.95rem;
+  .history-timeline__attachment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    padding: 0.28rem 0.65rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.18);
+    border-radius: 999px;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    flex-shrink: 0;
   }
 
-  .history-timeline__item-body {
-    display: grid;
-    gap: 0.4rem;
-    font-size: 0.9rem;
-    color: var(--color-muted);
+  :global(.history-timeline__attachment-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.6rem;
+    margin-top: 0;
+    margin-left: 0;
   }
 
-  .history-timeline__item-body span {
-    display: block;
-    white-space: pre-line;
+  :global(.history-timeline__attachment-action) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1.1rem;
+    border-radius: 999px;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: rgba(37, 99, 235, 0.16);
+    color: #1d4ed8;
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    box-shadow: 0 10px 22px -18px rgba(37, 99, 235, 0.45);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+    text-decoration: none;
+  }
+
+  :global(.history-timeline__attachment-action:hover),
+  :global(.history-timeline__attachment-action:focus-visible) {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px -18px rgba(37, 99, 235, 0.55);
+    background: rgba(37, 99, 235, 0.24);
+    color: #1e3a8a;
+  }
+
+  :global(.history-timeline__attachment-action--primary) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.26), rgba(59, 130, 246, 0.2));
+    color: #fff;
+    border-color: rgba(37, 99, 235, 0.65);
+    box-shadow: 0 18px 34px -20px rgba(37, 99, 235, 0.55);
+  }
+
+  :global(.history-timeline__attachment-action--primary:hover),
+  :global(.history-timeline__attachment-action--primary:focus-visible) {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.36), rgba(59, 130, 246, 0.28));
+    color: #f8fafc;
+    box-shadow: 0 22px 42px -20px rgba(37, 99, 235, 0.6);
   }
 
   .admin-form {
@@ -553,45 +1100,28 @@ const canEdit = isDoctor;
     color: #dc2626;
   }
 
-  :global(.admin-cell) {
-    display: grid;
-    justify-items: center;
-    gap: 0.35rem;
-    width: 100%;
-    text-align: center;
-  }
-
-  :global(.admin-cell--person) {
-    justify-items: start;
-    text-align: left;
-    gap: 0.5rem;
-  }
-
-  :global(.admin-cell--person .admin-history-meta) {
-    justify-items: start;
-    text-align: left;
-  }
-
-  .admin-table--history tbody tr.admin-history-row:hover .admin-row-hint,
-  .admin-table--history tbody tr.admin-history-row:focus-within .admin-row-hint {
+  :global(.records-row--history:hover .admin-row-hint),
+  :global(.records-row--history:focus-within .admin-row-hint) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
     color: #fff;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.65), rgba(37, 99, 235, 0.45));
   }
 
   :global(.admin-row-hint) {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: 0.5rem;
-    padding: 0.3rem 0.7rem;
+    padding: 0.25rem 0.6rem;
     border-radius: 999px;
-    background: rgba(37, 99, 235, 0.16);
+    background: rgba(37, 99, 235, 0.14);
     color: #1d4ed8;
     font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     transition: background 0.18s ease, color 0.18s ease;
+    margin-top: 0.75rem;
+    align-self: flex-start;
+    justify-self: flex-start;
   }
 
   :global(.admin-row-hint)::after {
@@ -657,6 +1187,15 @@ const canEdit = isDoctor;
       max-height: 100vh;
       border-radius: 0;
       padding: clamp(1.5rem, 6vw, 2rem);
+    }
+
+    .history-attachments-overlay__body {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .history-attachments-overlay__list {
+      max-height: 40vh;
     }
   }
 </style>

@@ -107,6 +107,55 @@ export const listAppointmentRequests = async ({ status, search, limit = 25, offs
   return rows;
 };
 
+export const listAppointmentRequestsForPatient = async ({
+  patientId,
+  userId,
+  email,
+  statuses,
+} = {}) => {
+  if (!patientId && !userId && !email) return [];
+
+  const filters = [];
+  const params = [];
+  let index = 1;
+
+  if (patientId) {
+    filters.push(`patient_id = $${index}`);
+    params.push(patientId);
+    index += 1;
+  } else if (userId) {
+    filters.push(`user_id = $${index}`);
+    params.push(userId);
+    index += 1;
+  } else if (email) {
+    filters.push(`LOWER(email) = LOWER($${index})`);
+    params.push(email);
+    index += 1;
+  }
+
+  if (Array.isArray(statuses) && statuses.length) {
+    filters.push(`status = ANY($${index}::text[])`);
+    params.push(statuses);
+    index += 1;
+  } else {
+    filters.push(`status <> $${index}`);
+    params.push(APPOINTMENT_REQUEST_STATUS.CONFIRMED);
+    index += 1;
+  }
+
+  if (!filters.length) return [];
+
+  const query = `
+    SELECT *
+    FROM appointment_requests
+    WHERE ${filters.join(' AND ')}
+    ORDER BY created_at DESC
+  `;
+
+  const { rows } = await pool.query(query, params);
+  return rows;
+};
+
 export const findAppointmentRequestById = async ({ id }) => {
   const query = `
     SELECT *
@@ -238,10 +287,26 @@ export const assignUserToAppointmentRequests = async ({ email, userId }) => {
   return rows;
 };
 
-export const ensurePatientAndLinkRequestsForEmail = async ({ email, fullName }) => {
+export const ensurePatientAndLinkRequestsForEmail = async ({
+  email,
+  fullName,
+  phone,
+  documentId,
+  birthDate,
+  gender,
+  age,
+}) => {
   if (!email) return null;
 
-  const patient = await ensurePatientForUserRegistration({ email, fullName });
+  const patient = await ensurePatientForUserRegistration({
+    email,
+    fullName,
+    phone,
+    documentId,
+    birthDate,
+    gender,
+    age,
+  });
 
   if (patient) {
     await linkPatientToAppointmentRequests({ email, patientId: patient.id });
@@ -261,4 +326,89 @@ const linkPatientToAppointmentRequests = async ({ email, patientId }) => {
   `;
 
   await pool.query(query, [email, patientId]);
+};
+
+const isTokenExpired = (expiresAt) => {
+  if (!expiresAt) return true;
+  const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime())) return true;
+  return expiry.getTime() < Date.now();
+};
+
+export const findAppointmentRequestByLinkToken = async ({ token }) => {
+  if (!token) return null;
+
+  const { rows } = await pool.query(
+    `
+      SELECT *
+      FROM appointment_requests
+      WHERE link_token = $1
+      LIMIT 1
+    `,
+    [token],
+  );
+
+  return rows[0] ?? null;
+};
+
+export const consumeAppointmentLinkToken = async ({ token, userId }) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `
+        SELECT *
+        FROM appointment_requests
+        WHERE link_token = $1
+        FOR UPDATE
+      `,
+      [token],
+    );
+
+    const request = rows[0];
+    if (!request) {
+      await client.query('ROLLBACK');
+      return { status: 'NOT_FOUND', request: null };
+    }
+
+    if (isTokenExpired(request.token_expires_at)) {
+      await client.query('ROLLBACK');
+      return { status: 'EXPIRED', request };
+    }
+
+    if (request.user_id && request.user_id !== userId) {
+      await client.query('ROLLBACK');
+      return { status: 'ALREADY_LINKED_OTHER', request };
+    }
+
+    const alreadyLinked = request.user_id === userId;
+
+    const { rows: updatedRows } = await client.query(
+      `
+        UPDATE appointment_requests
+        SET user_id = $2,
+            is_existing_patient = true,
+            link_token = NULL,
+            token_expires_at = NULL,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [request.id, userId],
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      status: alreadyLinked ? 'ALREADY_LINKED' : 'LINKED',
+      request: updatedRows[0] ?? null,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };

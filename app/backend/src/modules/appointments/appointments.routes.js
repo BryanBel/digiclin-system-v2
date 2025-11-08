@@ -4,10 +4,16 @@ import {
   findAppointmentById,
   listAppointments,
   listAppointmentsForDoctor,
+  listAppointmentsForPatient,
 } from './appointments.repository.js';
 import { z } from 'zod';
 import { authenticateUser } from '../auth/auth.middlewares.js';
-import { ensurePatientFromRequest } from '../patients/patients.repository.js';
+import {
+  ensurePatientFromRequest,
+  ensurePatientForUserRegistration,
+} from '../patients/patients.repository.js';
+import { listAppointmentRequestsForPatient } from '../appointment_requests/appointment_requests.repository.js';
+import { APPOINTMENT_REQUEST_STATUS } from '../appointment_requests/appointment_requests.constants.js';
 
 const listAppointmentsSchema = z.object({
   status: z.string().optional(),
@@ -17,6 +23,13 @@ const listAppointmentsSchema = z.object({
 
 const listDoctorAppointmentsSchema = listAppointmentsSchema.extend({
   view: z.enum(['all', 'upcoming']).optional(),
+});
+
+const listPatientAppointmentsSchema = z.object({
+  status: z.string().optional(),
+  view: z.enum(['all', 'upcoming']).optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 const createSelfAppointmentSchema = z.object({
@@ -101,21 +114,65 @@ router.post('/self', authenticateUser, async (req, res, next) => {
 
 router.get('/mine', authenticateUser, async (req, res, next) => {
   try {
-    if (req.user?.role !== 'doctor') {
-      return res.status(403).json({ error: 'Acceso restringido para este recurso.' });
+    const role = req.user?.role;
+
+    if (role === 'doctor') {
+      const query = listDoctorAppointmentsSchema.parse(req.query);
+      const fromDate = query.view === 'upcoming' ? new Date() : undefined;
+      const appointments = await listAppointmentsForDoctor({
+        doctorId: req.user.id,
+        status: query.status,
+        limit: query.limit,
+        offset: query.offset,
+        fromDate,
+      });
+
+      return res.json({ appointments, requests: [] });
     }
 
-    const query = listDoctorAppointmentsSchema.parse(req.query);
-    const fromDate = query.view === 'upcoming' ? new Date() : undefined;
-    const appointments = await listAppointmentsForDoctor({
-      doctorId: req.user.id,
-      status: query.status,
-      limit: query.limit,
-      offset: query.offset,
-      fromDate,
-    });
+    if (role === 'patient') {
+      const query = listPatientAppointmentsSchema.parse(req.query);
+      const fromDate = query.view === 'upcoming' ? new Date() : undefined;
 
-    res.json({ appointments });
+      const patient = await ensurePatientForUserRegistration({
+        email: req.user.email,
+        fullName: req.user.full_name ?? undefined,
+      });
+
+      const appointments = patient
+        ? await listAppointmentsForPatient({
+            patientId: patient.id,
+            status: query.status,
+            limit: query.limit,
+            offset: query.offset,
+            fromDate,
+          })
+        : [];
+
+      const defaultRequestStatuses = [
+        APPOINTMENT_REQUEST_STATUS.PENDING,
+        APPOINTMENT_REQUEST_STATUS.RESCHEDULE,
+      ];
+
+      let requestStatuses = null;
+      if (query.status) {
+        requestStatuses = [query.status];
+      } else if (query.view === 'upcoming') {
+        requestStatuses = defaultRequestStatuses;
+      }
+
+      const requests = await listAppointmentRequestsForPatient({
+        patientId: patient?.id ?? null,
+        userId: req.user.id,
+        email: req.user.email,
+        statuses: requestStatuses ?? undefined,
+        fromDate,
+      });
+
+      return res.json({ appointments, requests });
+    }
+
+    return res.status(403).json({ error: 'Acceso restringido para este recurso.' });
   } catch (error) {
     next(error);
   }

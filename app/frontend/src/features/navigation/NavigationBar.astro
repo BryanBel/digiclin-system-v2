@@ -5,6 +5,7 @@ const { user, pathname } = Astro.props;
 const isLoggedIn = Boolean(user);
 const isAdmin = user?.role === 'admin';
 const isDoctor = user?.role === 'doctor';
+const isPatient = user?.role === 'patient';
 const userEmail = user?.email ?? '';
 const userRole = user?.role ?? '';
 ---
@@ -34,6 +35,22 @@ const userRole = user?.role ?? '';
     hidden={!isDoctor}
   >
     Mis citas
+  </a>
+  <a
+    href="/patient/appointments"
+    class={`site-nav__link${pathname === '/patient/appointments' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="patient-appointments"
+    hidden={!isPatient}
+  >
+    Mis citas
+  </a>
+  <a
+    href="/patient/medical-history"
+    class={`site-nav__link${pathname === '/patient/medical-history' ? ' site-nav__link--active' : ''}`}
+    data-nav-link="patient-history"
+    hidden={!isPatient}
+  >
+    Mi historial
   </a>
   <a
     href="/admin/appointment-requests"

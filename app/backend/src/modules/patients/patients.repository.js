@@ -9,6 +9,24 @@ const sanitiseMetadata = (metadata) => {
   return {};
 };
 
+const fetchLatestAppointmentRequestByEmail = async (email, client) => {
+  if (!email) return null;
+
+  const db = getClient(client);
+  const { rows } = await db.query(
+    `
+      SELECT full_name, phone, email, document_id, birth_date, gender, age
+      FROM appointment_requests
+      WHERE LOWER(email) = LOWER($1)
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [email],
+  );
+
+  return rows[0] ?? null;
+};
+
 export const findPatientByDocumentOrEmail = async ({ documentId, email }, client) => {
   if (!documentId && !email) return null;
 
@@ -198,32 +216,126 @@ export const ensurePatientFromRequest = async ({
   );
 };
 
-export const ensurePatientForUserRegistration = async ({ email, fullName }, client) => {
+export const ensurePatientForUserRegistration = async (
+  { email, fullName, phone, documentId, birthDate, gender, age } = {},
+  client,
+) => {
   if (!email) return null;
 
   const db = getClient(client);
   const existing = await findPatientByDocumentOrEmail({ email }, db);
+  const latestRequest = await fetchLatestAppointmentRequestByEmail(email, db);
 
-  const normalizedName = (fullName ?? '').trim() || email.split('@')[0] || email;
+  const sanitizedFullName = typeof fullName === 'string' ? fullName.trim() : '';
+  const sanitizedPhone = typeof phone === 'string' ? phone.trim() : '';
+  const sanitizedDocumentId = typeof documentId === 'string' ? documentId.trim() : '';
+
+  let sanitizedBirthDate = null;
+  if (birthDate instanceof Date) {
+    sanitizedBirthDate = birthDate;
+  } else if (typeof birthDate === 'string' && birthDate.trim()) {
+    sanitizedBirthDate = birthDate.trim();
+  }
+
+  const sanitizedGender = typeof gender === 'string' ? gender.trim().toLowerCase() : null;
+  const sanitizedAge = typeof age === 'number' && Number.isFinite(age) ? age : null;
+
+  const pickString = (...candidates) => {
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string') continue;
+      const trimmed = candidate.trim();
+      if (trimmed) return trimmed;
+    }
+    return null;
+  };
+
+  const ALLOWED_GENDERS = new Set(['male', 'female']);
+
+  const pickGender = (...candidates) => {
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string') continue;
+      const normalized = candidate.trim().toLowerCase();
+      if (ALLOWED_GENDERS.has(normalized)) {
+        return normalized;
+      }
+    }
+    return null;
+  };
+
+  const pickBirthDate = (...candidates) => {
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (candidate instanceof Date) {
+        if (!Number.isNaN(candidate.getTime())) return candidate;
+      } else if (typeof candidate === 'string') {
+        const trimmed = candidate.trim();
+        if (trimmed) return trimmed;
+      }
+    }
+    return null;
+  };
+
+  const pickNumber = (...candidates) => {
+    for (const candidate of candidates) {
+      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+
+  const normalizedName =
+    pickString(sanitizedFullName, latestRequest?.full_name, existing?.full_name) ||
+    email.split('@')[0] ||
+    email;
+
+  const normalizedPhone = pickString(sanitizedPhone, latestRequest?.phone, existing?.phone);
+  const normalizedDocumentId = pickString(
+    sanitizedDocumentId,
+    latestRequest?.document_id,
+    existing?.document_id,
+  );
+
+  const normalizedBirthDate = pickBirthDate(
+    sanitizedBirthDate,
+    latestRequest?.birth_date,
+    existing?.birth_date,
+  );
+
+  const normalizedGender = pickGender(sanitizedGender, latestRequest?.gender, existing?.gender);
+
+  const calculatedAgeFromBirth = normalizedBirthDate ? calculateAge(normalizedBirthDate) : null;
+  const normalizedAge = pickNumber(
+    sanitizedAge,
+    latestRequest?.age,
+    calculatedAgeFromBirth,
+    existing?.age,
+  );
 
   if (existing) {
-    const needsUpdate = normalizedName && normalizedName !== existing.full_name;
-    if (needsUpdate) {
-      return updatePatient(
-        {
-          id: existing.id,
-          fullName: normalizedName,
-        },
-        db,
-      );
-    }
-    return existing;
+    const updatePayload = {
+      id: existing.id,
+      fullName: normalizedName,
+      phone: normalizedPhone ?? existing.phone ?? null,
+      email,
+      documentId: normalizedDocumentId ?? existing.document_id ?? null,
+      birthDate: normalizedBirthDate,
+      gender: normalizedGender ?? existing.gender ?? null,
+      age: normalizedAge ?? existing.age ?? null,
+    };
+
+    return updatePatient(updatePayload, db);
   }
 
   return createPatient(
     {
       fullName: normalizedName,
       email,
+      phone: normalizedPhone ?? undefined,
+      documentId: normalizedDocumentId ?? undefined,
+      birthDate: normalizedBirthDate ?? undefined,
+      gender: normalizedGender ?? undefined,
+      age: normalizedAge ?? undefined,
     },
     db,
   );
