@@ -122,11 +122,27 @@ const parseDateSafe = (value) => {
 };
 
 const getPreferredInfo = (request) => {
-  const preferredDateLabel = formatDate(request.preferred_date);
+  const appointment = request.__appointment;
+  const scheduledDate = appointment?.scheduled_for ?? request.scheduled_for ?? null;
+
+  if (scheduledDate) {
+    return formatDate(scheduledDate);
+  }
+
   const timeRange = request.preferred_time_range
     ? TIME_RANGE_LABELS[request.preferred_time_range] ?? request.preferred_time_range
     : '';
-  return [preferredDateLabel, timeRange ? `Franja: ${timeRange}` : ''].filter(Boolean).join(' · ');
+  const preferredParts = [];
+
+  if (request.preferred_date) {
+    preferredParts.push(formatDate(request.preferred_date));
+  }
+
+  if (timeRange) {
+    preferredParts.push(`Franja: ${timeRange}`);
+  }
+
+  return preferredParts.length ? preferredParts.join(' · ') : 'Sin preferencia';
 };
 
 const fetchAppointmentDetails = async (appointmentId) => {
