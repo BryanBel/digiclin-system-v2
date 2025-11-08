@@ -3,10 +3,27 @@ import { BACK_ENDPOINT } from '../../config/endpoint.js';
 const tableBody = document.querySelector('[data-appointments-body]');
 
 const STATUS_LABELS = {
-  confirmed: 'Cita planificada',
+  confirmed: 'Confirmada',
+  reschedule: 'Reprogramada',
+  rejected: 'Rechazada',
+  cancelled: 'Rechazada',
   pending: 'Pendiente',
-  cancelled: 'Cancelada',
-  completed: 'Finalizada',
+  completed: 'Realizada',
+};
+
+const state = {
+  appointments: [],
+  requestByAppointmentId: new Map(),
+};
+
+const escapeHtml = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 const formatDate = (value) => {
@@ -25,10 +42,50 @@ const formatDate = (value) => {
   }
 };
 
+const parseDateSafe = (value) => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+const deriveAppointmentStatus = (appointment) => {
+  const linkedRequest = state.requestByAppointmentId.get(Number(appointment.id)) ?? null;
+  const requestStatus = linkedRequest?.status ?? null;
+  const baseStatus = appointment.status ?? 'pending';
+
+  if (requestStatus === 'rejected' || baseStatus === 'cancelled') {
+    return 'rejected';
+  }
+
+  if (requestStatus === 'reschedule') {
+    return 'reschedule';
+  }
+
+  if (baseStatus === 'completed') {
+    return 'completed';
+  }
+
+  if (requestStatus === 'confirmed' || baseStatus === 'confirmed') {
+    const scheduledAt = parseDateSafe(appointment.scheduled_for);
+    if (scheduledAt && scheduledAt.getTime() <= Date.now()) {
+      return 'completed';
+    }
+    return 'confirmed';
+  }
+
+  const scheduledAt = parseDateSafe(appointment.scheduled_for);
+  if (scheduledAt && scheduledAt.getTime() <= Date.now()) {
+    return 'completed';
+  }
+
+  return baseStatus ?? 'pending';
+};
+
 const renderTable = (appointments) => {
   if (!appointments.length) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty">
         <td colspan="5">No hay citas registradas.</td>
       </tr>
     `;
@@ -37,10 +94,11 @@ const renderTable = (appointments) => {
 
   tableBody.innerHTML = appointments
     .map((appointment) => {
-      const statusClass = appointment.status
-        ? `admin-status admin-status--${appointment.status}`
-        : 'admin-status';
-      const statusLabel = STATUS_LABELS[appointment.status] ?? appointment.status ?? '-';
+      const derivedStatus = deriveAppointmentStatus(appointment);
+      const statusClass = derivedStatus
+        ? `records-status records-status--${derivedStatus}`
+        : 'records-status';
+      const statusLabel = STATUS_LABELS[derivedStatus] ?? STATUS_LABELS[appointment.status] ?? appointment.status ?? '-';
       const doctorDisplay =
         appointment.doctor_email ?? appointment.doctor_name ?? appointment.doctor_id ?? '-';
       const patientName = appointment.patient_name ?? appointment.legacy_name ?? 'Sin asignar';
@@ -67,16 +125,42 @@ const renderTable = (appointments) => {
         patientMeta.push(`Teléfono: ${appointment.legacy_phone}`);
       }
 
+      const patientMetaMarkup = patientMeta.length
+        ? patientMeta
+            .map((item) => `<span class="records-entry-line records-entry-line--muted">${escapeHtml(item)}</span>`)
+            .join('')
+        : '';
+
       return `
-        <tr>
+        <tr class="records-row records-row--appointment">
           <td>
-            <div>${patientName}</div>
-            ${patientMeta.length ? `<div class="admin-patient-meta">${patientMeta.map((item) => `<span>${item}</span>`).join('')}</div>` : ''}
+            <div class="records-entry">
+              <div class="records-entry-header">
+                <span class="records-entry-date">${escapeHtml(patientName)}</span>
+              </div>
+              ${patientMetaMarkup}
+            </div>
           </td>
-          <td>${doctorDisplay}</td>
-          <td>${formatDate(appointment.scheduled_for)}</td>
-          <td>${appointment.reason ?? '-'}</td>
-          <td><span class="${statusClass}">${statusLabel}</span></td>
+          <td>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(doctorDisplay)}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(formatDate(appointment.scheduled_for))}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <span class="records-pill records-pill--muted">${escapeHtml(appointment.reason ?? '-')}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry records-entry--status">
+              <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+            </div>
+          </td>
         </tr>
       `;
     })
@@ -85,7 +169,7 @@ const renderTable = (appointments) => {
 
 const loadAppointments = async () => {
   tableBody.innerHTML = `
-    <tr class="admin-empty">
+    <tr class="records-empty">
       <td colspan="5">Cargando citas...</td>
     </tr>
   `;
@@ -101,10 +185,40 @@ const loadAppointments = async () => {
     }
 
     const appointments = Array.isArray(data.appointments) ? data.appointments : [];
-    renderTable(appointments);
+    state.appointments = appointments;
+
+    try {
+      const requestsResponse = await fetch(
+        `${BACK_ENDPOINT}/api/appointment-requests?limit=250`,
+        {
+          credentials: 'include',
+        },
+      );
+
+      if (requestsResponse.ok) {
+        const requestsData = await requestsResponse.json();
+        const requestList = Array.isArray(requestsData.requests) ? requestsData.requests : [];
+        state.requestByAppointmentId = requestList.reduce((acc, request) => {
+          if (request?.appointment_id) {
+            const appointmentId = Number(request.appointment_id);
+            if (!acc.has(appointmentId)) {
+              acc.set(appointmentId, request);
+            }
+          }
+          return acc;
+        }, new Map());
+      } else {
+        state.requestByAppointmentId = new Map();
+      }
+    } catch (error) {
+      console.warn('No se pudieron cargar las solicitudes vinculadas a las citas:', error);
+      state.requestByAppointmentId = new Map();
+    }
+
+    renderTable(state.appointments);
   } catch (error) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty records-empty--error">
         <td colspan="5">${error.message}</td>
       </tr>
     `;

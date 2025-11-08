@@ -11,7 +11,17 @@ export const createAppointmentRequestSchema = z.object({
     .refine((value) => !Number.isNaN(Date.parse(value)), {
       message: 'Selecciona una fecha de nacimiento válida',
     })
-    .transform((value) => new Date(value)),
+    .transform((value) => new Date(value))
+    .refine(
+      (date) => {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const normalizedBirth = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return normalizedBirth <= today;
+      },
+      { message: 'La fecha de nacimiento no puede ser futura.' },
+    ),
   gender: z.enum(['male', 'female'], {
     errorMap: () => ({ message: 'Selecciona un género válido' }),
   }),
@@ -69,4 +79,8 @@ export const rescheduleAppointmentRequestSchema = z.object({
     })
     .transform((value) => new Date(value)),
   adminNote: z.string().min(3, 'Agrega una nota para la reprogramación'),
+});
+
+export const linkAppointmentTokenSchema = z.object({
+  token: z.string().min(16, 'El enlace proporcionado no es válido'),
 });

@@ -29,6 +29,21 @@ const closeTriggers = document.querySelectorAll('[data-close-history-panel]');
 const actionsContainer = document.querySelector('[data-history-actions]');
 const searchInput = document.querySelector('[data-history-search]');
 const createButton = document.querySelector('[data-open-history-create]');
+const attachmentsField = document.querySelector('[data-history-attachments-field]');
+const attachmentsInput = document.querySelector('[data-history-attachments-input]');
+const attachmentsPreviewList = document.querySelector('[data-history-attachments-preview]');
+const attachmentsMeta = document.querySelector('[data-history-attachments-meta]');
+const attachmentsCountLabel = document.querySelector('[data-history-attachments-count]');
+const attachmentsOpenButton = document.querySelector('[data-open-history-attachments]');
+const attachmentsOverlay = document.querySelector('[data-history-attachments-overlay]');
+const attachmentsOverlayCount = document.querySelector('[data-history-attachments-overlay-count]');
+const attachmentsOverlayList = document.querySelector('[data-history-attachments-items]');
+const attachmentsOverlayPreviewCanvas = document.querySelector('[data-history-attachments-preview-canvas]');
+const attachmentsOverlayPreviewEmpty = document.querySelector('[data-history-attachments-preview-empty]');
+const attachmentsOverlayPreviewActions = document.querySelector('[data-history-attachments-preview-actions]');
+const attachmentsOverlayOpenLink = document.querySelector('[data-history-attachments-preview-open]');
+const attachmentsOverlayDownloadLink = document.querySelector('[data-history-attachments-preview-download]');
+const attachmentsOverlayCloseButtons = document.querySelectorAll('[data-close-history-attachments]');
 
 const canEdit = form?.dataset.canEdit === 'true';
 const urlParams = new URLSearchParams(window.location.search);
@@ -50,6 +65,9 @@ const state = {
     used: false,
   },
   formVisitId: null,
+  selectedAttachments: [],
+  overlayAttachments: [],
+  overlayAttachmentIndex: null,
 };
 
 const formatDateTime = (value) => {
@@ -69,6 +87,16 @@ const formatDateTime = (value) => {
   }
 };
 
+const escapeHtml = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 const toInputDateTimeValue = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -76,6 +104,115 @@ const toInputDateTimeValue = (value) => {
   const offsetMinutes = date.getTimezoneOffset();
   const local = new Date(date.getTime() - offsetMinutes * 60000);
   return local.toISOString().slice(0, 16);
+};
+
+const allowedAttachmentTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return 'Tamaño desconocido';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 ? 0 : size < 10 ? 1 : 0;
+  return `${size.toFixed(precision)} ${units[unitIndex]}`;
+};
+
+const buildFileUrl = (relativePath) => {
+  if (!relativePath || typeof relativePath !== 'string') return '';
+  if (/^https?:/i.test(relativePath)) return relativePath;
+  const normalized = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+  return `${BACK_ENDPOINT}${normalized}`;
+};
+
+const buildAttachmentKey = (entry, attachment, fallbackIndex) => {
+  if (attachment && attachment.id !== undefined && attachment.id !== null) {
+    return `id:${attachment.id}`;
+  }
+  const entryId = entry?.id ?? 'unknown';
+  const identifier =
+    attachment?.filepath ??
+    attachment?.url ??
+    attachment?.name ??
+    `attachment-${entryId}-${fallbackIndex}`;
+  return `entry:${entryId}|${identifier}`;
+};
+
+const resetSelectedAttachments = () => {
+  state.selectedAttachments = [];
+  if (attachmentsInput) {
+    attachmentsInput.value = '';
+  }
+  if (attachmentsPreviewList) {
+    attachmentsPreviewList.innerHTML = '';
+  }
+};
+
+const renderAttachmentsPreview = () => {
+  if (!attachmentsPreviewList) return;
+  if (!state.selectedAttachments.length) {
+    attachmentsPreviewList.innerHTML = '';
+    return;
+  }
+
+  const items = state.selectedAttachments
+    .map((file, index) => {
+      const sizeLabel = formatFileSize(file.size);
+      const label = `${file.name}`;
+      return `
+        <li class="attachments-preview__item" data-preview-index="${index}">
+          <div class="attachments-preview__meta">
+            <span class="attachments-preview__name">${escapeHtml(label)}</span>
+            <span class="attachments-preview__info">${escapeHtml(file.type || 'Tipo desconocido')} · ${escapeHtml(sizeLabel)}</span>
+          </div>
+        </li>
+      `;
+    })
+    .join('');
+
+  attachmentsPreviewList.innerHTML = items;
+};
+
+const handleAttachmentsInputChange = (event) => {
+  const files = event.target?.files ? Array.from(event.target.files) : [];
+  if (!files.length) {
+    resetSelectedAttachments();
+    return;
+  }
+
+  if (files.length > MAX_ATTACHMENTS) {
+    createNotification({
+      title: 'Demasiados archivos',
+      description: `Solo puedes adjuntar hasta ${MAX_ATTACHMENTS} archivos por registro.`,
+      type: 'error',
+    });
+    resetSelectedAttachments();
+    return;
+  }
+
+  const invalidFile = files.find((file) => {
+    if (!allowedAttachmentTypes.has(file.type)) return true;
+    if (file.size > MAX_ATTACHMENT_SIZE) return true;
+    return false;
+  });
+
+  if (invalidFile) {
+    createNotification({
+      title: 'Archivo no permitido',
+      description: 'Adjunta únicamente PDF, PNG o JPG de hasta 10MB.',
+      type: 'error',
+    });
+    resetSelectedAttachments();
+    return;
+  }
+
+  state.selectedAttachments = files;
+  renderAttachmentsPreview();
 };
 
 const resetFeedback = () => {
@@ -116,6 +253,39 @@ const renderPatientOptions = () => {
   if (currentValue) {
     patientSelect.value = currentValue;
   }
+};
+
+const findPatientById = (candidateId) => {
+  if (!candidateId) return null;
+  const numericId = Number(candidateId);
+  if (Number.isNaN(numericId)) return null;
+  return state.patients.find((patient) => Number(patient.id) === numericId) ?? null;
+};
+
+const updateMetaFromForm = () => {
+  const selectedId = patientSelect?.value;
+  if (!selectedId) {
+    populateMeta(null);
+    return;
+  }
+
+  const patient = findPatientById(selectedId);
+  if (!patient) {
+    populateMeta(null);
+    return;
+  }
+
+  const entryDateValue = entryDateInput?.value || null;
+
+  populateMeta({
+    patient: {
+      name: patient.full_name ?? 'Sin registro',
+      documentId: patient.document_id ?? 'Sin documento',
+      email: patient.email ?? 'Sin correo',
+      phone: patient.phone ?? 'Sin teléfono',
+    },
+    entryDate: entryDateValue,
+  });
 };
 
 const getEntryPatientId = (entry) => entry.patientId ?? entry.patient?.id ?? null;
@@ -160,12 +330,253 @@ const buildPatientSummaries = () => {
   });
 };
 
+const getEntriesForPatient = (patientId) => {
+  if (!patientId) return [];
+  return state.entries.filter((item) => getEntryPatientId(item) === patientId);
+};
+
+const countAttachmentsForPatient = (patientId) => {
+  return getEntriesForPatient(patientId).reduce((total, entry) => {
+    const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+    return total + attachments.length;
+  }, 0);
+};
+
+const updateAttachmentsMetaForPatient = (patientId) => {
+  if (!attachmentsMeta || !attachmentsCountLabel || !attachmentsOpenButton) return;
+
+  if (!patientId) {
+    attachmentsMeta.hidden = true;
+    attachmentsCountLabel.textContent = 'Sin archivos adjuntos';
+    attachmentsOpenButton.disabled = true;
+    return;
+  }
+
+  const total = countAttachmentsForPatient(patientId);
+  attachmentsMeta.hidden = false;
+  attachmentsCountLabel.textContent = total
+    ? `${total} archivo${total === 1 ? '' : 's'} adjunto${total === 1 ? '' : 's'}`
+    : 'Sin archivos adjuntos';
+  attachmentsOpenButton.disabled = total === 0;
+};
+
+const resetAttachmentsOverlay = () => {
+  state.overlayAttachments = [];
+  state.overlayAttachmentIndex = null;
+  if (attachmentsOverlayList) attachmentsOverlayList.innerHTML = '';
+  if (attachmentsOverlayPreviewCanvas) attachmentsOverlayPreviewCanvas.innerHTML = '';
+  if (attachmentsOverlayPreviewEmpty) attachmentsOverlayPreviewEmpty.hidden = false;
+  if (attachmentsOverlayPreviewActions) attachmentsOverlayPreviewActions.hidden = true;
+  if (attachmentsOverlayCount) attachmentsOverlayCount.textContent = '0 archivos';
+  attachmentsOverlay?.removeAttribute('data-mode');
+};
+
+const closeAttachmentsOverlay = () => {
+  if (attachmentsOverlay) {
+    attachmentsOverlay.hidden = true;
+  }
+  resetAttachmentsOverlay();
+};
+
+const selectOverlayAttachment = (index) => {
+  if (!Array.isArray(state.overlayAttachments) || !state.overlayAttachments.length) return;
+  if (index < 0 || index >= state.overlayAttachments.length) return;
+
+  state.overlayAttachmentIndex = index;
+
+  const item = state.overlayAttachments[index];
+  if (!item || !attachmentsOverlayPreviewCanvas || !attachmentsOverlayPreviewEmpty) return;
+
+  attachmentsOverlayPreviewCanvas.innerHTML = '';
+  attachmentsOverlayPreviewEmpty.hidden = true;
+
+  const { attachment, entry } = item;
+  const fileUrl = buildFileUrl(attachment?.url ?? attachment?.filepath ?? '');
+
+  if (!fileUrl) {
+    attachmentsOverlayPreviewCanvas.innerHTML = '<p>No se pudo cargar la vista previa.</p>';
+  } else if (attachment?.mimetype?.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.src = fileUrl;
+    img.alt = attachment?.name ?? 'Imagen adjunta';
+    attachmentsOverlayPreviewCanvas.appendChild(img);
+  } else if (attachment?.mimetype === 'application/pdf') {
+    const iframe = document.createElement('iframe');
+    iframe.src = `${fileUrl}#toolbar=0&navpanes=0`;
+    iframe.title = attachment?.name ?? 'Documento PDF';
+    attachmentsOverlayPreviewCanvas.appendChild(iframe);
+  } else {
+    attachmentsOverlayPreviewCanvas.innerHTML = `
+      <div class="history-attachments-overlay__placeholder">
+        <p>No se puede previsualizar este tipo de archivo.</p>
+        <p>Descárgalo para revisarlo localmente.</p>
+      </div>
+    `;
+  }
+
+  if (attachmentsOverlayPreviewActions) {
+    attachmentsOverlayPreviewActions.hidden = !fileUrl;
+  }
+
+  if (attachmentsOverlayOpenLink) {
+    attachmentsOverlayOpenLink.href = fileUrl || '#';
+  }
+
+  if (attachmentsOverlayDownloadLink) {
+    attachmentsOverlayDownloadLink.href = fileUrl || '#';
+    attachmentsOverlayDownloadLink.download = attachment?.filename ?? attachment?.name ?? 'adjunto';
+  }
+
+  if (attachmentsOverlayList) {
+    attachmentsOverlayList.querySelectorAll('[data-history-attachment-index]').forEach((button) => {
+      if (Number(button.dataset.historyAttachmentIndex) === index) {
+        button.classList.add('history-attachments-overlay__item-button--active');
+      } else {
+        button.classList.remove('history-attachments-overlay__item-button--active');
+      }
+    });
+  }
+
+  if (attachmentsOverlayPreviewCanvas && entry) {
+    const contextInfo = document.createElement('p');
+    contextInfo.className = 'history-attachments-overlay__placeholder';
+    const doctorLabel = entry.doctor?.name ? ` · Doctor: ${entry.doctor.name}` : '';
+    contextInfo.textContent = `Registro del ${formatDateTime(entry.entryDate)}${doctorLabel}`;
+    attachmentsOverlayPreviewCanvas.appendChild(contextInfo);
+  }
+};
+
+const buildOverlayItemsForPatient = (patientId) => {
+  if (!patientId) return [];
+
+  const entries = sortEntriesDesc(getEntriesForPatient(patientId));
+  const flattened = [];
+
+  entries.forEach((entry) => {
+    const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+    attachments.forEach((attachment, index) => {
+      const key = buildAttachmentKey(entry, attachment, `${flattened.length}-${index}`);
+      flattened.push({
+        entry,
+        attachment,
+        key,
+      });
+    });
+  });
+
+  return flattened;
+};
+
+const openAttachmentsOverlay = ({ patientId, entryId, attachmentIndex, onlyEntry = false } = {}) => {
+  const targetPatientId = patientId ?? state.activePatientId;
+  if (!targetPatientId) {
+    createNotification({
+      title: 'Sin paciente',
+      description: 'Selecciona un paciente antes de consultar archivos adjuntos.',
+      type: 'error',
+    });
+    return;
+  }
+
+  const overlayItemsAll = buildOverlayItemsForPatient(targetPatientId);
+  const entryKey = entryId === undefined || entryId === null ? null : String(entryId);
+  const overlayItems = onlyEntry && entryKey
+    ? overlayItemsAll.filter((item) => String(item.entry?.id ?? '') === entryKey)
+    : overlayItemsAll;
+
+  if (!overlayItems.length) {
+    createNotification({
+      title: onlyEntry ? 'Sin archivos en este registro' : 'Sin adjuntos',
+      description: onlyEntry
+        ? 'Este registro no tiene archivos adjuntos disponibles.'
+        : 'Aún no se han adjuntado archivos para este paciente.',
+      type: 'info',
+    });
+    return;
+  }
+
+  state.overlayAttachments = overlayItems;
+  state.overlayAttachmentIndex = null;
+
+  if (attachmentsOverlayCount) {
+    const baseLabel = `${overlayItems.length} archivo${overlayItems.length === 1 ? '' : 's'}`;
+    attachmentsOverlayCount.textContent = onlyEntry ? `${baseLabel} del registro` : baseLabel;
+  }
+
+  if (attachmentsOverlayList) {
+    attachmentsOverlayList.innerHTML = overlayItems
+      .map((item, index) => {
+        const attachment = item.attachment;
+        const entry = item.entry;
+        const sizeLabel = attachment?.size ? formatFileSize(attachment.size) : 'Tamaño desconocido';
+        const metaParts = [formatDateTime(entry.entryDate)];
+        if (attachment?.mimetype) metaParts.push(attachment.mimetype);
+        metaParts.push(sizeLabel);
+        return `
+          <li>
+            <button type="button" class="history-attachments-overlay__item-button" data-history-attachment-index="${index}">
+              <span class="history-attachments-overlay__item-content">
+                <span class="history-attachments-overlay__item-title">${escapeHtml(
+                  attachment?.name ?? attachment?.filename ?? 'Archivo adjunto',
+                )}</span>
+                <span class="history-attachments-overlay__item-meta">${escapeHtml(
+                  metaParts.join(' · '),
+                )}</span>
+              </span>
+            </button>
+          </li>
+        `;
+      })
+      .join('');
+  }
+
+  if (attachmentsOverlay) {
+    attachmentsOverlay.hidden = false;
+    if (onlyEntry) {
+      attachmentsOverlay.setAttribute('data-mode', 'entry');
+    } else {
+      attachmentsOverlay.removeAttribute('data-mode');
+    }
+  }
+
+  if (attachmentsOverlayPreviewCanvas) {
+    attachmentsOverlayPreviewCanvas.innerHTML = '';
+  }
+  if (attachmentsOverlayPreviewEmpty) {
+    attachmentsOverlayPreviewEmpty.hidden = false;
+  }
+  if (attachmentsOverlayPreviewActions) {
+    attachmentsOverlayPreviewActions.hidden = true;
+  }
+
+  attachmentsOverlayList?.querySelectorAll('[data-history-attachment-index]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.historyAttachmentIndex);
+      selectOverlayAttachment(index);
+    });
+  });
+
+  let initialIndex = 0;
+  if (
+    typeof attachmentIndex === 'number' &&
+    attachmentIndex >= 0 &&
+    attachmentIndex < overlayItems.length
+  ) {
+    initialIndex = attachmentIndex;
+  } else if (entryKey) {
+    initialIndex = overlayItems.findIndex((item) => String(item.entry?.id ?? '') === entryKey);
+    if (initialIndex < 0) initialIndex = 0;
+  }
+
+  selectOverlayAttachment(initialIndex);
+};
+
 const renderTable = () => {
   const summaries = buildPatientSummaries();
 
   if (!summaries.length) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty">
         <td colspan="6">No se encontraron registros.</td>
       </tr>
     `;
@@ -183,25 +594,44 @@ const renderTable = () => {
       const patientId = summary.patientId;
 
       return `
-        <tr class="admin-history-row" data-history-patient="${patientId}">
+        <tr class="records-row records-row--history" data-history-patient="${patientId}">
           <td>
-            <div class="admin-cell admin-cell--person">
-              <div class="admin-history-summary">
-                <strong>${patientName}</strong>
-                <div class="admin-history-meta">
-                  ${patientDocument ? `<span>${patientDocument}</span>` : ''}
-                  ${patientEmail ? `<span>${patientEmail}</span>` : ''}
-                  ${patientPhone ? `<span>${patientPhone}</span>` : ''}
-                </div>
+            <div class="records-entry">
+              <div class="records-entry-header">
+                <span class="records-entry-title">${escapeHtml(patientName)}</span>
+                <span class="records-badge records-badge--history">${totalEntries} registro${totalEntries === 1 ? '' : 's'}</span>
               </div>
-              <div class="admin-row-hint">VER HISTORIAL (${totalEntries})</div>
+              ${patientDocument ? `<span class="records-entry-line records-entry-line--muted">${escapeHtml(patientDocument)}</span>` : ''}
+              ${patientEmail ? `<span class="records-entry-line records-entry-line--muted">${escapeHtml(patientEmail)}</span>` : ''}
+              ${patientPhone ? `<span class="records-entry-line records-entry-line--muted">${escapeHtml(patientPhone)}</span>` : ''}
+              <span class="admin-row-hint">Ver historial completo</span>
             </div>
           </td>
-          <td><div class="admin-cell">${formatDateTime(latestEntry?.entryDate)}</div></td>
-          <td><div class="admin-cell"><p class="admin-history-text">${latestEntry?.medicalInform ?? 'Sin registro'}</p></div></td>
-          <td><div class="admin-cell"><p class="admin-history-text">${latestEntry?.treatment ?? 'Sin registro'}</p></div></td>
-          <td><div class="admin-cell"><p class="admin-history-text">${latestEntry?.recipe ?? 'Sin registro'}</p></div></td>
-          <td><div class="admin-cell">${doctorLabel}</div></td>
+          <td>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(formatDateTime(latestEntry?.entryDate))}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <p class="admin-history-text">${escapeHtml(latestEntry?.medicalInform ?? 'Sin registro')}</p>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <p class="admin-history-text">${escapeHtml(latestEntry?.treatment ?? 'Sin registro')}</p>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <p class="admin-history-text">${escapeHtml(latestEntry?.recipe ?? 'Sin registro')}</p>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(doctorLabel)}</span>
+            </div>
+          </td>
         </tr>
       `;
     })
@@ -237,7 +667,7 @@ const loadPatientOptions = async () => {
 
 const loadEntries = async () => {
   tableBody.innerHTML = `
-    <tr class="admin-empty">
+    <tr class="records-empty">
       <td colspan="6">Cargando historial clínico...</td>
     </tr>
   `;
@@ -283,15 +713,18 @@ const loadEntries = async () => {
       offset += limit;
     }
 
-    state.entries = collectedEntries;
+    state.entries = collectedEntries.map((entry) => ({
+      ...entry,
+      attachments: Array.isArray(entry.attachments) ? entry.attachments : [],
+    }));
     renderTable();
     attachRowListeners();
     refreshActiveTimeline();
   } catch (error) {
     console.error('Error cargando historiales:', error);
     tableBody.innerHTML = `
-      <tr class="admin-empty">
-        <td colspan="6">${error.message}</td>
+      <tr class="records-empty records-empty--error">
+        <td colspan="6">${escapeHtml(error.message)}</td>
       </tr>
     `;
   }
@@ -302,6 +735,17 @@ const closePanel = () => {
   state.activePatientId = null;
   state.isCreating = false;
   state.formVisitId = null;
+  closeAttachmentsOverlay();
+  resetSelectedAttachments();
+  if (attachmentsMeta) {
+    attachmentsMeta.hidden = true;
+  }
+  if (attachmentsCountLabel) {
+    attachmentsCountLabel.textContent = 'Sin archivos adjuntos';
+  }
+  if (attachmentsOpenButton) {
+    attachmentsOpenButton.disabled = true;
+  }
   if (panel) {
     panel.hidden = true;
     panel.removeAttribute('data-mode');
@@ -346,26 +790,145 @@ const populateMeta = (entry) => {
   metaPhone.textContent = entry?.patient?.phone ?? 'Sin teléfono';
 };
 
-const renderTimeline = (entries) => {
+const renderTimeline = (entries, patientId = state.activePatientId) => {
   if (!timelineSection || !timelineList) return;
   const sorted = sortEntriesDesc(entries);
+  const overlayIndexMap = new Map();
+
+  if (patientId) {
+    const overlayItems = buildOverlayItemsForPatient(patientId);
+    overlayItems.forEach((item, index) => {
+      if (!item) return;
+      overlayIndexMap.set(item.key, index);
+    });
+  }
 
   timelineList.innerHTML = sorted
     .map((entry) => {
       const doctorLabel = entry.doctor?.name ?? 'Sin doctor asignado';
       const treatment = entry.treatment ?? 'Sin tratamiento registrado';
       const recipe = entry.recipe ?? 'Sin receta registrada';
+      const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+      const attachmentsCount = attachments.length;
+      const summaryLabel = attachmentsCount
+        ? `${attachmentsCount} archivo${attachmentsCount === 1 ? '' : 's'} adjunto${attachmentsCount === 1 ? '' : 's'}`
+        : '';
+      const attachmentsBadge = attachmentsCount
+        ? `<span class="records-badge records-badge--attachments">${escapeHtml(summaryLabel)}</span>`
+        : '';
+
+      const attachmentsMarkup = attachmentsCount
+        ? (() => {
+            const itemsMarkup = attachments
+              .map((attachment, attachmentIndex) => {
+                const key = buildAttachmentKey(
+                  entry,
+                  attachment,
+                  `${entry.id ?? 'entry'}-${attachmentIndex}`,
+                );
+                const overlayIndex = overlayIndexMap.has(key)
+                  ? overlayIndexMap.get(key)
+                  : undefined;
+                const mimetypeLabel = attachment?.mimetype ?? 'Formato desconocido';
+                const fileType = mimetypeLabel.includes('/')
+                  ? mimetypeLabel.split('/').pop()?.toUpperCase()
+                  : mimetypeLabel.toUpperCase();
+                const sizeLabel = attachment?.size
+                  ? formatFileSize(attachment.size)
+                  : 'Tamaño desconocido';
+                const entryDatasetId = entry?.id !== undefined && entry?.id !== null ? String(entry.id) : '';
+
+                const typeBadge = fileType
+                  ? `<span class="history-timeline__attachment-badge">${escapeHtml(fileType)}</span>`
+                  : '';
+
+                const entryFilesButton = entryDatasetId
+                  ? `
+                  <button
+                    type="button"
+                    class="history-timeline__attachment-action history-timeline__attachment-action--primary"
+                    data-history-entry-attachments-overlay-entry="${entryDatasetId}"
+                  >
+                    Ver archivo(s)
+                  </button>
+                `
+                  : '';
+
+                const viewButton = `
+                  <button
+                    type="button"
+                    class="history-timeline__attachment-action"
+                    data-history-entry-attachment-overlay-index="${
+                      typeof overlayIndex === 'number' ? overlayIndex : ''
+                    }"
+                    data-history-entry-attachment-entry="${entryDatasetId}"
+                  >
+                    Ver en visor
+                  </button>
+                `;
+
+                return `
+                  <li class="history-timeline__attachment-item">
+                    <div class="history-timeline__attachment-chip">
+                      ${typeBadge}
+                      <span class="history-timeline__attachment-name">${escapeHtml(
+                        attachment?.name ?? attachment?.filename ?? 'Archivo adjunto',
+                      )}</span>
+                      <div class="history-timeline__attachment-actions">
+                        ${entryFilesButton}
+                        ${viewButton}
+                      </div>
+                    </div>
+                  </li>
+                `;
+              })
+              .join('');
+
+            return `
+              <div class="history-timeline__attachments">
+                <ul class="history-timeline__attachments-list">
+                  ${itemsMarkup}
+                </ul>
+              </div>
+            `;
+          })()
+        : `
+            <div class="history-timeline__attachments">
+              <span class="history-timeline__attachments-empty">Sin archivos adjuntos</span>
+            </div>
+          `;
 
       return `
         <li class="history-timeline__item">
-          <div class="history-timeline__item-header">
-            <strong>${formatDateTime(entry.entryDate)}</strong>
-            <span>Doctor: ${doctorLabel}</span>
-          </div>
-          <div class="history-timeline__item-body">
-            <span><strong>Motivo:</strong> ${entry.medicalInform ?? 'Sin registro'}</span>
-            <span><strong>Tratamiento:</strong> ${treatment}</span>
-            <span><strong>Receta:</strong> ${recipe}</span>
+          <div class="history-timeline__grid">
+            <div class="history-timeline__cell history-timeline__cell--meta">
+              <div class="records-entry history-timeline__entry">
+                <div class="records-entry-header">
+                  <span class="records-entry-title">${escapeHtml(formatDateTime(entry.entryDate))}</span>
+                  ${attachmentsBadge}
+                </div>
+                <span class="records-entry-line records-entry-line--muted">Doctor: ${escapeHtml(doctorLabel)}</span>
+              </div>
+            </div>
+            <div class="history-timeline__cell history-timeline__cell--details">
+              <dl class="history-timeline__details">
+                <div class="history-timeline__detail">
+                  <dt>Motivo</dt>
+                  <dd>${escapeHtml(entry.medicalInform ?? 'Sin registro')}</dd>
+                </div>
+                <div class="history-timeline__detail">
+                  <dt>Tratamiento</dt>
+                  <dd>${escapeHtml(treatment)}</dd>
+                </div>
+                <div class="history-timeline__detail">
+                  <dt>Receta</dt>
+                  <dd>${escapeHtml(recipe)}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="history-timeline__cell history-timeline__cell--attachments">
+              ${attachmentsMarkup}
+            </div>
           </div>
         </li>
       `;
@@ -377,6 +940,43 @@ const renderTimeline = (entries) => {
     const total = sorted.length;
     timelineCount.textContent = `${total} registro${total === 1 ? '' : 's'}`;
   }
+
+  timelineList
+    .querySelectorAll('[data-history-entry-attachment-overlay-index]')
+    .forEach((button) => {
+      button.addEventListener('click', () => {
+        const entryKey = button.dataset.historyEntryAttachmentEntry;
+        const overlayIndexRaw = button.dataset.historyEntryAttachmentOverlayIndex;
+        const overlayIndex = overlayIndexRaw === '' ? NaN : Number(overlayIndexRaw);
+        if (Number.isFinite(overlayIndex)) {
+          openAttachmentsOverlay({
+            patientId: state.activePatientId,
+            attachmentIndex: overlayIndex,
+          });
+        } else if (entryKey) {
+          const numericId = Number(entryKey);
+          openAttachmentsOverlay({
+            patientId: state.activePatientId,
+            entryId: Number.isFinite(numericId) ? numericId : entryKey,
+          });
+        }
+      });
+    });
+
+  timelineList
+    .querySelectorAll('[data-history-entry-attachments-overlay-entry]')
+    .forEach((button) => {
+      button.addEventListener('click', () => {
+        const entryKey = button.dataset.historyEntryAttachmentsOverlayEntry;
+        if (!entryKey) return;
+        const numericId = Number(entryKey);
+        openAttachmentsOverlay({
+          patientId: state.activePatientId,
+          entryId: Number.isFinite(numericId) ? numericId : entryKey,
+          onlyEntry: true,
+        });
+      });
+    });
 };
 
 const openPatientHistory = (patientId) => {
@@ -393,6 +993,7 @@ const openPatientHistory = (patientId) => {
   state.activePatientId = patientId;
   state.isCreating = false;
   state.formVisitId = null;
+  updateAttachmentsMetaForPatient(patientId);
 
   if (patientField) {
     patientField.hidden = true;
@@ -416,7 +1017,7 @@ const openPatientHistory = (patientId) => {
   }
   populateMeta(latestEntry);
 
-  renderTimeline(sortedEntries);
+  renderTimeline(sortedEntries, patientId);
 
   resetFeedback();
   if (modal) {
@@ -443,7 +1044,8 @@ const refreshActiveTimeline = () => {
   populateMeta(latestEntry);
   const patientName = latestEntry.patient?.name ?? 'Paciente sin nombre';
   panelTitle.textContent = `Historial clínico de ${patientName}`;
-  renderTimeline(sortedEntries);
+  renderTimeline(sortedEntries, state.activePatientId);
+  updateAttachmentsMetaForPatient(state.activePatientId);
 };
 
 const openCreatePanel = async () => {
@@ -468,6 +1070,8 @@ const openCreatePanel = async () => {
 
   form.reset();
   populateMeta(null);
+  resetSelectedAttachments();
+  updateAttachmentsMetaForPatient(null);
 
   if (panel) {
     panel.hidden = false;
@@ -538,18 +1142,24 @@ const handleFormSubmit = async (event) => {
       throw new Error('Selecciona un paciente para registrar el historial.');
     }
 
+    const formData = new FormData();
+    formData.append('patientId', String(Number(selectedPatientId)));
+    formData.append('medicalInform', medicalInform);
+    if (entryDate) formData.append('entryDate', entryDate);
+    if (treatment) formData.append('treatment', treatment);
+    if (recipe) formData.append('recipe', recipe);
+    if (state.formVisitId !== null && state.formVisitId !== undefined) {
+      formData.append('visitId', String(state.formVisitId));
+    }
+
+    state.selectedAttachments.forEach((file) => {
+      formData.append('attachments', file);
+    });
+
     const response = await fetch(`${BACK_ENDPOINT}/api/medical-history`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        patientId: Number(selectedPatientId),
-        entryDate,
-        medicalInform,
-        treatment: treatment || undefined,
-        recipe: recipe || undefined,
-        visitId: state.formVisitId ?? undefined,
-      }),
+      body: formData,
     });
 
     const data = await response.json();
@@ -565,10 +1175,11 @@ const handleFormSubmit = async (event) => {
 
     feedback.textContent = 'Cambios guardados correctamente.';
     feedback.className = 'admin-feedback admin-feedback--success';
-  const numericPatientId = Number(selectedPatientId);
-  await loadEntries();
-  closePanel();
-  openPatientHistory(numericPatientId);
+    const numericPatientId = Number(selectedPatientId);
+    await loadEntries();
+    closePanel();
+    openPatientHistory(numericPatientId);
+    resetSelectedAttachments();
   } catch (error) {
     feedback.textContent = error.message;
     feedback.className = 'admin-feedback admin-feedback--error';
@@ -610,6 +1221,8 @@ const attemptPrefill = async () => {
     state.formVisitId = Number.isNaN(parsedId) ? null : parsedId;
   }
 
+  updateMetaFromForm();
+
   state.pendingPrefill.used = true;
 
   if (window.location.search) {
@@ -637,7 +1250,21 @@ form?.addEventListener('submit', handleFormSubmit);
 closeTriggers.forEach((trigger) => {
   trigger.addEventListener('click', closePanel);
 });
+attachmentsInput?.addEventListener('change', handleAttachmentsInputChange);
+attachmentsOpenButton?.addEventListener('click', () => {
+  openAttachmentsOverlay({ patientId: state.activePatientId });
+});
+attachmentsOverlayCloseButtons.forEach((button) => {
+  button.addEventListener('click', closeAttachmentsOverlay);
+});
 searchInput?.addEventListener('input', handleSearchInput);
+
+patientSelect?.addEventListener('change', () => {
+  updateMetaFromForm();
+});
+
+entryDateInput?.addEventListener('change', updateMetaFromForm);
+entryDateInput?.addEventListener('input', updateMetaFromForm);
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && modal && !modal.hidden) {

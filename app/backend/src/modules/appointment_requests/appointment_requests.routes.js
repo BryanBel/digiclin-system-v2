@@ -5,6 +5,10 @@ import {
   findAppointmentRequestById,
   listAppointmentRequests,
   updateAppointmentRequestStatus,
+  assignUserToAppointmentRequests,
+  ensurePatientAndLinkRequestsForEmail,
+  findAppointmentRequestByLinkToken,
+  consumeAppointmentLinkToken,
 } from './appointment_requests.repository.js';
 import {
   confirmAppointmentRequestSchema,
@@ -12,13 +16,30 @@ import {
   listAppointmentRequestsSchema,
   rescheduleAppointmentRequestSchema,
   updateAppointmentRequestSchema,
+  linkAppointmentTokenSchema,
 } from './appointment_requests.routes.schemas.js';
 import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
-import resend from '../../services/resend.js';
+import { sendEmail } from '../../services/emailDispatcher.js';
 import usersRepository from '../users/users.repository.js';
 import { buildFrontendUrl } from '../../utils/urlHelpers.js';
 
 const router = Router();
+
+const ROLE_DISPLAY_LABEL = {
+  patient: 'Paciente',
+  doctor: 'Doctor',
+  admin: 'Admin',
+};
+
+const formatRecipient = ({ email, fullName, role = 'patient' }) => {
+  if (!email) return '';
+
+  const label = ROLE_DISPLAY_LABEL[role] ?? ROLE_DISPLAY_LABEL.patient;
+  const hasName = typeof fullName === 'string' && fullName.trim().length > 0;
+  const normalizedName = hasName ? `${label} ${fullName.trim()}` : label;
+
+  return `${normalizedName} <${email}>`;
+};
 
 router.get('/', async (req, res, next) => {
   try {
@@ -30,10 +51,118 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+router.get('/link/:token', async (req, res, next) => {
+  try {
+    const { token } = linkAppointmentTokenSchema.parse({ token: req.params.token });
+    const request = await findAppointmentRequestByLinkToken({ token });
+
+    if (!request) {
+      return res.status(404).json({ error: 'El enlace no es válido o ya fue utilizado.' });
+    }
+
+    const expiresAt = request.token_expires_at ? new Date(request.token_expires_at) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({
+        error: 'El enlace ha expirado. Solicita una nueva vinculación.',
+      });
+    }
+
+    res.json({
+      request: {
+        fullName: request.full_name,
+        email: request.email,
+        status: request.status,
+        createdAt: request.created_at,
+      },
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/link', async (req, res, next) => {
+  try {
+    const { token } = linkAppointmentTokenSchema.parse(req.body);
+    const user = res.locals.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Inicia sesión para vincular tu solicitud.' });
+    }
+
+    const result = await consumeAppointmentLinkToken({ token, userId: user.id });
+
+    if (result.status === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'El enlace no es válido o ya fue utilizado.' });
+    }
+
+    if (result.status === 'EXPIRED') {
+      return res.status(410).json({
+        error: 'El enlace ha expirado. Solicita una nueva vinculación.',
+      });
+    }
+
+    if (result.status === 'ALREADY_LINKED_OTHER') {
+      return res.status(409).json({
+        error:
+          'Este enlace ya fue utilizado por otra cuenta. Contacta a soporte si necesitas ayuda.',
+      });
+    }
+
+    const linkedRequest = result.request;
+
+    if (linkedRequest?.email) {
+      await assignUserToAppointmentRequests({ email: linkedRequest.email, userId: user.id });
+      await ensurePatientAndLinkRequestsForEmail({
+        email: linkedRequest.email,
+        fullName: linkedRequest.full_name ?? undefined,
+      });
+    }
+
+    res.json({
+      message:
+        result.status === 'ALREADY_LINKED'
+          ? 'La solicitud ya estaba vinculada a tu cuenta.'
+          : 'Tu solicitud se vinculó correctamente a tu cuenta.',
+      status: result.status,
+      request: linkedRequest
+        ? {
+            publicId: linkedRequest.public_id,
+            status: linkedRequest.status,
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', async (req, res, next) => {
   try {
-    const payload = createAppointmentRequestSchema.parse(req.body);
+    const isPatientUser = res.locals.user?.role === 'patient';
+    const incomingBody = {
+      ...req.body,
+      isExistingPatient: isPatientUser ? true : req.body?.isExistingPatient,
+    };
+
+    const payload = createAppointmentRequestSchema.parse(incomingBody);
     const { request, linkToken } = await createAppointmentRequest(payload);
+
+    if (res.locals.user?.id) {
+      await assignUserToAppointmentRequests({
+        email: payload.email,
+        userId: res.locals.user.id,
+      });
+    }
+
+    await ensurePatientAndLinkRequestsForEmail({
+      email: payload.email,
+      fullName: payload.fullName,
+      phone: payload.phone,
+      documentId: payload.documentId,
+      birthDate: payload.birthDate,
+      gender: payload.gender,
+      age: payload.age,
+    });
 
     const signupLink = buildFrontendUrl('/signup', { email: payload.email });
     const loginLink = buildFrontendUrl('/login');
@@ -41,11 +170,14 @@ router.post('/', async (req, res, next) => {
       ? buildFrontendUrl('/link-appointment', { token: linkToken })
       : null;
 
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const recipient = formatRecipient({
+      email: payload.email,
+      fullName: payload.fullName,
+      role: 'patient',
+    });
 
-    await resend.emails.send({
-      from: fromEmail,
-      to: payload.email,
+    await sendEmail({
+      to: recipient,
       subject: 'Solicitud de cita recibida',
       text: [
         `Hola ${payload.fullName},`,
@@ -63,6 +195,7 @@ router.post('/', async (req, res, next) => {
     res.status(201).json({
       message: 'Solicitud registrada correctamente.',
       requestId: request.public_id,
+      wasLinkedToUser: Boolean(res.locals.user?.id),
     });
   } catch (error) {
     next(error);
@@ -104,15 +237,19 @@ router.post('/:id/confirm', async (req, res, next) => {
       createdByUser: res.locals.user?.id ?? null,
     });
 
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const scheduledForText =
       payload.scheduledFor instanceof Date
         ? payload.scheduledFor.toISOString()
         : payload.scheduledFor;
 
-    await resend.emails.send({
-      from: fromEmail,
-      to: request.email,
+    const recipient = formatRecipient({
+      email: request.email,
+      fullName: request.full_name,
+      role: 'patient',
+    });
+
+    await sendEmail({
+      to: recipient,
       subject: 'Tu cita ha sido confirmada',
       text: [
         `Hola ${request.full_name},`,

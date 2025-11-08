@@ -1,0 +1,446 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const locals = Astro.locals as {
+  user?: {
+    id?: string;
+    email?: string;
+    role?: string;
+  } | null;
+};
+
+const user = locals.user ?? null;
+const isLoggedIn = Boolean(user?.id);
+const token = Astro.url.searchParams.get("token") ?? "";
+
+const envBackend = (import.meta.env.PUBLIC_BACKEND_URL ?? '').trim();
+const devBackend = import.meta.env.DEV ? 'http://localhost:3000' : '';
+const currentOrigin = Astro.url?.origin ?? '';
+const backendEndpoint = envBackend || devBackend || currentOrigin;
+---
+
+<Layout title="DigiClin | Vincula tu solicitud">
+  <section class="link-shell">
+    <div
+      class="link-card"
+      data-link-flow
+      data-token={token}
+      data-logged-in={isLoggedIn ? "true" : "false"}
+      data-backend-url={backendEndpoint}
+    >
+      <header class="link-header">
+        <h1>Vincula tu solicitud de cita</h1>
+        <p id="link-status" class="link-status" role="status">
+          {token
+            ? "Estamos verificando la información del enlace."
+            : "No se recibió un enlace válido."}
+        </p>
+      </header>
+
+      <section class="link-details" aria-live="polite">
+        <dl id="link-details"></dl>
+      </section>
+
+      <div class="link-actions">
+        <button id="link-action" class="link-action" type="button" hidden>
+          Vincular solicitud con mi cuenta
+        </button>
+        <button id="link-login" class="link-login" type="button" hidden>
+          Iniciar sesión para continuar
+        </button>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script type="module">
+  const host = document.querySelector("[data-link-flow]");
+  if (!host) {
+    console.warn("No se encontró el contenedor de vinculación en el DOM.");
+  } else {
+    const statusEl = host.querySelector("#link-status");
+    const detailsEl = host.querySelector("#link-details");
+    const actionButton = host.querySelector("#link-action");
+    const loginButton = host.querySelector("#link-login");
+
+    const token = typeof host.dataset.token === "string" ? host.dataset.token.trim() : "";
+    const loggedIn = host.dataset.loggedIn === "true";
+    const datasetBackend = typeof host.dataset.backendUrl === "string" ? host.dataset.backendUrl.trim() : "";
+
+    const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
+    const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    const envBackend = typeof env.PUBLIC_BACKEND_URL === "string" ? env.PUBLIC_BACKEND_URL.trim() : "";
+    const devEndpoint = env.DEV === true || env.DEV === "true" ? "http://localhost:3000" : "";
+
+    const LINKED_STORAGE_KEY = "digiclinLinkedRequestInfo";
+
+    const baseEndpoint = (() => {
+      const candidates = [datasetBackend, envBackend, devEndpoint, runtimeOrigin];
+      for (const candidate of candidates) {
+        if (candidate) return candidate.replace(/\/$/, "");
+      }
+      return "";
+    })();
+
+    const endpoints = {
+      validate: token ? `${baseEndpoint}/api/appointment-requests/link/${encodeURIComponent(token)}` : null,
+      link: token ? `${baseEndpoint}/api/appointment-requests/link` : null,
+    };
+
+    const FEEDBACK_CLASSES = {
+      success: "link-status--success",
+      error: "link-status--error",
+      info: "link-status--info",
+    };
+
+    const readLinkedInfo = () => {
+      if (typeof window === "undefined") return null;
+      try {
+        const raw = window.sessionStorage.getItem(LINKED_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && parsed.token) {
+          return parsed;
+        }
+      } catch (error) {
+        console.warn("No se pudo leer el estado de vinculación previo", error);
+      }
+      return null;
+    };
+
+    const writeLinkedInfo = ({ message, status }) => {
+      if (typeof window === "undefined" || !token) return;
+      try {
+        window.sessionStorage.setItem(
+          LINKED_STORAGE_KEY,
+          JSON.stringify({
+            token,
+            message: message ?? null,
+            status: status ?? null,
+            timestamp: Date.now(),
+          }),
+        );
+      } catch (error) {
+        console.warn("No se pudo almacenar el estado de vinculación", error);
+      }
+    };
+
+    const setStatus = (message, variant = "info") => {
+      if (!(statusEl instanceof HTMLElement)) return;
+      Object.values(FEEDBACK_CLASSES).forEach((className) => statusEl.classList.remove(className));
+      if (variant && FEEDBACK_CLASSES[variant]) {
+        statusEl.classList.add(FEEDBACK_CLASSES[variant]);
+      }
+      statusEl.textContent = message;
+    };
+
+    const renderDetails = (payload) => {
+      if (!(detailsEl instanceof HTMLElement)) return;
+      detailsEl.innerHTML = "";
+      if (!payload) return;
+
+      const entries = [
+        ["Nombre registrado", payload.fullName ?? "Sin registro"],
+        ["Correo", payload.email ?? "Sin registro"],
+        ["Estado", payload.status ?? "Pendiente"],
+        ["Creada", payload.createdAt ? new Date(payload.createdAt).toLocaleString() : "Sin registro"],
+      ];
+
+      for (const [label, value] of entries) {
+        const wrapper = document.createElement("div");
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        wrapper.append(dt, dd);
+        detailsEl.append(wrapper);
+      }
+    };
+
+    const storePendingToken = () => {
+      if (!token || typeof window === "undefined") return;
+      try {
+        window.localStorage.setItem("digiclinPendingLinkToken", token);
+      } catch (error) {
+        console.warn("No se pudo almacenar el token de vinculación en localStorage.", error);
+      }
+    };
+
+    const clearPendingToken = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const existing = window.localStorage.getItem("digiclinPendingLinkToken");
+        if (existing === token) {
+          window.localStorage.removeItem("digiclinPendingLinkToken");
+        }
+      } catch (error) {
+        console.warn("No se pudo limpiar el token almacenado.", error);
+      }
+    };
+
+    const toggleButtons = ({ showAction = false, showLogin = false }) => {
+      if (actionButton instanceof HTMLButtonElement) {
+        actionButton.hidden = !showAction;
+        actionButton.disabled = !showAction;
+      }
+      if (loginButton instanceof HTMLButtonElement) {
+        loginButton.hidden = !showLogin;
+        loginButton.disabled = !showLogin;
+      }
+    };
+
+    const handleLink = async () => {
+      if (!endpoints.link) return;
+      if (!(actionButton instanceof HTMLButtonElement)) return;
+
+      actionButton.disabled = true;
+      actionButton.textContent = "Vinculando...";
+      setStatus("Estamos vinculando tu solicitud a tu cuenta...", "info");
+
+      try {
+        const response = await fetch(endpoints.link, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ token }),
+        });
+
+        const contentType = response.headers.get("content-type") ?? "";
+        const parsed = contentType.includes("application/json")
+          ? await response.json().catch(() => ({}))
+          : await response.text().catch(() => "");
+
+        if (!response.ok) {
+          const errorMessage =
+            (typeof parsed === "object" && parsed !== null && parsed.error) ||
+            (typeof parsed === "string" && parsed) ||
+            "No se pudo vincular la solicitud.";
+          throw new Error(errorMessage);
+        }
+
+        if (typeof parsed === "object" && parsed !== null) {
+          renderDetails(parsed.request);
+        }
+        clearPendingToken();
+        writeLinkedInfo({
+          message:
+            typeof parsed?.message === "string"
+              ? parsed.message
+              : "Tu solicitud quedó vinculada correctamente",
+          status: typeof parsed?.status === "string" ? parsed.status : "LINKED",
+        });
+        toggleButtons({ showAction: false, showLogin: false });
+        setStatus(
+          typeof parsed?.message === "string"
+            ? parsed.message
+            : "Tu solicitud quedó vinculada correctamente",
+          "success",
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Falló la vinculación.";
+        setStatus(message, "error");
+        toggleButtons({ showAction: true, showLogin: false });
+      } finally {
+        if (actionButton instanceof HTMLButtonElement) {
+          actionButton.disabled = false;
+          actionButton.textContent = "Vincular solicitud con mi cuenta";
+        }
+      }
+    };
+
+    const validateToken = async () => {
+      if (!token) {
+        setStatus("El enlace proporcionado no es válido.", "error");
+        toggleButtons({ showAction: false, showLogin: false });
+        return;
+      }
+
+      const stored = readLinkedInfo();
+      if (stored?.token === token) {
+        setStatus(
+          stored.message ||
+            (loggedIn
+              ? "Tu solicitud ya está vinculada a tu cuenta."
+              : "La solicitud vinculó correctamente."),
+          stored.status === "ALREADY_LINKED" ? "info" : "success",
+        );
+        toggleButtons({ showAction: false, showLogin: false });
+        return;
+      }
+
+      if (!endpoints.validate) {
+        setStatus("No pudimos determinar el servidor de verificación.", "error");
+        toggleButtons({ showAction: false, showLogin: false });
+        return;
+      }
+
+      setStatus("Verificando la información de tu solicitud...", "info");
+
+      try {
+        const response = await fetch(endpoints.validate, {
+          credentials: "include",
+        });
+
+        const contentType = response.headers.get("content-type") ?? "";
+        const parsed = contentType.includes("application/json")
+          ? await response.json().catch(() => ({}))
+          : await response.text().catch(() => "");
+
+        if (!response.ok) {
+          const errorMessage =
+            (typeof parsed === "object" && parsed !== null && parsed.error) ||
+            (typeof parsed === "string" && parsed) ||
+            "El enlace no es válido.";
+          throw new Error(errorMessage);
+        }
+
+        if (typeof parsed === "object" && parsed !== null) {
+          renderDetails(parsed.request);
+        }
+
+        if (loggedIn) {
+          toggleButtons({ showAction: true, showLogin: false });
+          await handleLink();
+        } else {
+          storePendingToken();
+          toggleButtons({ showAction: false, showLogin: true });
+          setStatus("Inicia sesión para completar la vinculación.", "info");
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo validar el enlace.";
+        const fallbackStored = readLinkedInfo();
+        if (fallbackStored?.token === token) {
+          setStatus(
+            fallbackStored.message ||
+              (loggedIn
+                ? "Tu solicitud ya está vinculada a tu cuenta."
+                : "La solicitud vinculó correctamente."),
+            fallbackStored.status === "ALREADY_LINKED" ? "info" : "success",
+          );
+          toggleButtons({ showAction: false, showLogin: false });
+        } else {
+          setStatus(message, "error");
+          toggleButtons({ showAction: false, showLogin: false });
+        }
+      }
+    };
+
+    actionButton?.addEventListener("click", handleLink);
+    loginButton?.addEventListener("click", () => {
+      if (!token) return;
+      storePendingToken();
+      const nextUrl = `/link-appointment?token=${encodeURIComponent(token)}`;
+      window.location.href = `/login?next=${encodeURIComponent(nextUrl)}`;
+    });
+
+    validateToken();
+  }
+</script>
+
+<style>
+  .link-shell {
+    display: flex;
+    justify-content: center;
+    padding: clamp(2rem, 4vw, 4rem) 1rem;
+  }
+
+  .link-card {
+    width: min(520px, 100%);
+    padding: clamp(1.75rem, 4vw, 2.75rem);
+    border-radius: 1.5rem;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .link-header h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 3.4vw, 2.35rem);
+    font-weight: 700;
+    color: var(--color-heading, #f8fafc);
+  }
+
+  .link-status {
+    margin: 0.75rem 0 0;
+    font-size: 1rem;
+    color: var(--color-muted, #cbd5f5);
+  }
+
+  .link-status--success {
+    color: #22c55e;
+  }
+
+  .link-status--error {
+    color: #f87171;
+  }
+
+  .link-status--info {
+    color: #60a5fa;
+  }
+
+  .link-details dl,
+  .link-details {
+    margin: 0;
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .link-details div {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .link-details dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-muted, #a5b4fc);
+  }
+
+  .link-details dd {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-heading, #f8fafc);
+  }
+
+  .link-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .link-action,
+  .link-login {
+    border: none;
+    border-radius: 999px;
+    padding: 0.85rem 1.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .link-action {
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    color: #0f172a;
+  }
+
+  .link-action:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .link-login {
+    background: rgba(59, 130, 246, 0.12);
+    color: #bfdbfe;
+  }
+
+  .link-action:hover:not(:disabled),
+  .link-login:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+  }
+</style>

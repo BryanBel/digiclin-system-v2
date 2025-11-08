@@ -6,6 +6,7 @@ import cors from 'cors';
 import { authenticateUser } from './src/modules/auth/auth.middlewares.js';
 import authRouter from './src/modules/auth/auth.routes.js';
 import patientsRouter from './src/modules/patients/patients.routes.js';
+import patientsPublicRouter from './src/modules/patients/patients.public.routes.js';
 import medicalHistoryRouter from './src/modules/medical_history/medical_history.routes.js';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
@@ -19,7 +20,7 @@ export const createAndConfigureApp = async () => {
 
   const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:4321'];
+    : ['http://localhost:4321', 'http://localhost:4320', 'http://localhost:4322'];
 
   app.use(cors({ credentials: true, origin: allowedOrigins }));
   app.use(express.json());
@@ -47,6 +48,7 @@ export const createAndConfigureApp = async () => {
 
   app.use('/api/auth', authRouter);
   app.use('/api/appointment-requests', appointmentRequestsRouter);
+  app.use('/api/patients/lookup', patientsPublicRouter);
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
   app.use('/api/appointments', appointmentsRouter);
@@ -130,10 +132,13 @@ export const createAndConfigureApp = async () => {
     }
 
     if (process.env.NODE_ENV !== 'prod' && err.stack) {
-      logPayload.stack = err.stack;
+      const [stackHead] = err.stack.split('\n');
+      logPayload.stack = stackHead.trim();
     }
 
-    console.error('[API ERROR]', logPayload);
+    const logger = errorSummary.status === 401 ? console.info : console.error;
+    const logLabel = errorSummary.status === 401 ? '[AUTH CHECK]' : '[API ERROR]';
+    logger(logLabel, logPayload);
 
     const responsePayload = { error: errorSummary.message };
     if (errorSummary.details !== undefined) {

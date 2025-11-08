@@ -35,6 +35,19 @@ export function getNavigationLinks(user, pathname) {
         path: '/admin/medical-history',
         isActive: pathname === '/admin/medical-history',
       });
+    } else if (user.role === 'patient') {
+      links.push({
+        type: 'link',
+        text: 'Mis citas',
+        path: '/patient/appointments',
+        isActive: pathname === '/patient/appointments',
+      });
+      links.push({
+        type: 'link',
+        text: 'Mi historial médico',
+        path: '/patient/medical-history',
+        isActive: pathname === '/patient/medical-history',
+      });
     }
 
     links.push({ type: 'button', text: 'Cerrar sesión', action: 'logout' });

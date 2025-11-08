@@ -28,6 +28,7 @@ const isDoctor = user?.role === 'doctor';
             </div>
           </header>
           <form id="doctor-quick-form" class="doctor-quick__form">
+            <input type="hidden" name="patientId" data-doctor-patient-id />
             <div class="doctor-quick__grid">
               <label class="doctor-quick__field">
                 <span>Nombre completo del paciente</span>
@@ -51,9 +52,16 @@ const isDoctor = user?.role === 'doctor';
               </label>
               <label class="doctor-quick__field">
                 <span>Teléfono (opcional)</span>
-                <input type="tel" name="phone" placeholder="555-000-0000" />
+                <input type="tel" name="phone" placeholder="0412-1234567" />
               </label>
             </div>
+
+            <label class="doctor-quick__checkbox">
+              <input type="checkbox" name="isExistingPatient" data-doctor-existing-toggle />
+              <span>Ya es paciente de DigiClin</span>
+            </label>
+
+            <p class="doctor-quick__prefill-feedback" data-doctor-prefill-feedback role="status"></p>
 
             <label class="doctor-quick__field">
               <span>Fecha y hora de la consulta</span>
@@ -117,8 +125,8 @@ const isDoctor = user?.role === 'doctor';
               </div>
             </header>
 
-            <div class="admin-table-wrapper">
-              <table class="admin-table admin-table--doctor">
+            <div class="records-table-wrapper">
+              <table class="records-table">
                 <thead>
                   <tr>
                     <th>Paciente</th>
@@ -129,7 +137,7 @@ const isDoctor = user?.role === 'doctor';
                   </tr>
                 </thead>
                 <tbody data-doctor-upcoming-body>
-                  <tr class="admin-empty">
+                  <tr class="records-empty">
                     <td colspan="5">Cargando citas...</td>
                   </tr>
                 </tbody>
@@ -147,8 +155,8 @@ const isDoctor = user?.role === 'doctor';
               </div>
             </header>
 
-            <div class="admin-table-wrapper">
-              <table class="admin-table admin-table--doctor">
+            <div class="records-table-wrapper">
+              <table class="records-table">
                 <thead>
                   <tr>
                     <th>Paciente</th>
@@ -159,7 +167,7 @@ const isDoctor = user?.role === 'doctor';
                   </tr>
                 </thead>
                 <tbody data-doctor-history-body>
-                  <tr class="admin-empty">
+                  <tr class="records-empty">
                     <td colspan="5">Cargando historial...</td>
                   </tr>
                 </tbody>
@@ -237,8 +245,8 @@ const isDoctor = user?.role === 'doctor';
   }
 
   .doctor-grid {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: clamp(1.25rem, 3vw, 1.75rem);
+    grid-template-columns: 1fr;
+    gap: clamp(1.5rem, 3vw, 2.25rem);
   }
 
   .admin-grid {
@@ -300,6 +308,33 @@ const isDoctor = user?.role === 'doctor';
     resize: vertical;
   }
 
+  .doctor-quick__checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-quick__checkbox input {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .doctor-quick__prefill-feedback {
+    min-height: 1.1rem;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+
+  .doctor-quick__prefill-feedback--success {
+    color: #059669;
+  }
+
+  .doctor-quick__prefill-feedback--error {
+    color: #dc2626;
+  }
+
   .doctor-quick__actions {
     display: flex;
     justify-content: flex-end;
@@ -324,6 +359,20 @@ const isDoctor = user?.role === 'doctor';
     gap: 1.25rem;
   }
 
+  .records-table-wrapper {
+    border-radius: 1rem;
+    overflow: auto;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+  }
+
+  .doctor-card .records-entry {
+    justify-items: start;
+  }
+
+  .doctor-card .records-entry.records-entry--status {
+    justify-items: start;
+  }
+
   .doctor-card__header {
     display: flex;
     justify-content: space-between;
@@ -341,54 +390,6 @@ const isDoctor = user?.role === 'doctor';
     color: var(--color-muted);
   }
 
-  .admin-table--doctor th,
-  .admin-table--doctor td {
-    text-align: left;
-    vertical-align: top;
-  }
-
-  .admin-table-wrapper {
-    overflow-x: auto;
-    border-radius: 1rem;
-  }
-
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--color-admin-border);
-  }
-
-  .admin-table th {
-    font-weight: 600;
-    color: var(--color-admin-table-header);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-  }
-
-  .admin-table tbody tr:hover {
-    background: var(--color-admin-row-hover);
-  }
-
-  :global(.admin-empty td) {
-    text-align: center;
-    color: var(--color-muted);
-  }
-
-  .doctor-appointment-meta {
-    margin-top: 0.35rem;
-    display: grid;
-    gap: 0.25rem;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
-
   .doctor-actions {
     display: flex;
     flex-wrap: wrap;
@@ -396,22 +397,9 @@ const isDoctor = user?.role === 'doctor';
     justify-content: flex-start;
   }
 
-  .doctor-text {
-    margin: 0;
-    text-align: left;
-  }
-
   .doctor-note {
     font-size: 0.85rem;
     color: var(--color-muted);
-  }
-
-  .doctor-row {
-    transition: background 0.18s ease;
-  }
-
-  .doctor-row:hover {
-    background: var(--color-admin-row-hover);
   }
 
   .doctor-feedback {
@@ -456,10 +444,28 @@ const isDoctor = user?.role === 'doctor';
     border: 1px solid rgba(37, 99, 235, 0.25);
   }
 
+  :global(.admin-button--compact) {
+    min-height: 2.25rem;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.88rem;
+  }
+
   :global(.admin-button--ghost) {
     background: transparent;
     border: 1px solid var(--color-admin-border);
     color: inherit;
+  }
+
+  :global(.admin-button--success) {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.18), rgba(22, 163, 74, 0.08));
+    color: #047857;
+    box-shadow: 0 12px 26px -18px rgba(22, 163, 74, 0.35);
+    border: 1px solid rgba(22, 163, 74, 0.25);
+  }
+
+  :global(.admin-button--success:not(:disabled):hover),
+  :global(.admin-button--success:not(:disabled):focus-visible) {
+    box-shadow: 0 18px 30px -18px rgba(22, 163, 74, 0.45);
   }
 
   :global(.admin-button:not(:disabled):hover),
@@ -473,20 +479,6 @@ const isDoctor = user?.role === 'doctor';
     cursor: wait;
     box-shadow: none;
     border-color: transparent;
-  }
-
-  :global(.admin-cell) {
-    display: grid;
-    justify-items: center;
-    gap: 0.35rem;
-    width: 100%;
-    text-align: center;
-  }
-
-  :global(.admin-cell--person) {
-    justify-items: start;
-    text-align: left;
-    gap: 0.5rem;
   }
 
   @media (max-width: 720px) {

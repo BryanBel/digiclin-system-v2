@@ -92,6 +92,88 @@
       </div>
     </div>
 
+    <div class="signup-patient-block" data-patient-field>
+      <p class="signup-patient-note">
+        Completa tus datos de paciente para que podamos agilizar tus citas desde el primer momento.
+      </p>
+
+      <div class="signup-field">
+        <label class="signup-label" for="patientPhone">Teléfono de contacto</label>
+        <div class="signup-input-wrapper signup-input-wrapper--plain">
+          <input
+            class="signup-input signup-input--plain"
+            type="tel"
+            id="patientPhone"
+            name="patientPhone"
+            placeholder="(1234)-1234567"
+            data-patient-input
+          />
+        </div>
+      </div>
+
+      <div class="signup-field-grid">
+        <div class="signup-field">
+          <label class="signup-label" for="patientDocumentId">Documento</label>
+          <div class="signup-input-wrapper signup-input-wrapper--plain">
+            <input
+              class="signup-input signup-input--plain"
+              type="text"
+              id="patientDocumentId"
+              name="patientDocumentId"
+              placeholder="V-00000000"
+              data-patient-input
+            />
+          </div>
+        </div>
+
+        <div class="signup-field">
+          <label class="signup-label" for="patientBirthDate">Fecha de nacimiento</label>
+          <div class="signup-input-wrapper signup-input-wrapper--plain">
+            <input
+              class="signup-input signup-input--plain"
+              type="date"
+              id="patientBirthDate"
+              name="patientBirthDate"
+              data-patient-input
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="signup-field-grid">
+        <div class="signup-field">
+          <label class="signup-label" for="patientGender">Género</label>
+          <div class="signup-input-wrapper signup-input-wrapper--plain">
+            <select
+              class="signup-input signup-input--plain"
+              id="patientGender"
+              name="patientGender"
+              data-patient-input
+            >
+              <option value="" disabled selected>Selecciona una opción</option>
+              <option value="female">Femenino</option>
+              <option value="male">Masculino</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="signup-field">
+          <label class="signup-label" for="patientAge">Edad</label>
+          <div class="signup-input-wrapper signup-input-wrapper--plain">
+            <input
+              class="signup-input signup-input--plain"
+              type="number"
+              id="patientAge"
+              name="patientAge"
+              placeholder="Se calcula automáticamente"
+              readonly
+              data-patient-input
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Correo -->
     <div class="signup-field">
       <label class="signup-label" for="email">Correo electrónico</label>
@@ -314,6 +396,18 @@
   const passwordInput = document.querySelector<HTMLInputElement>("#password");
   const confirmInput =
     document.querySelector<HTMLInputElement>("#confirmPassword");
+  const roleSelect = document.querySelector<HTMLSelectElement>("#role");
+  const patientSections = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-patient-field]"),
+  );
+  const patientInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-patient-input]"),
+  );
+  const patientPhoneInput = document.querySelector<HTMLInputElement>("#patientPhone");
+  const patientDocumentInput = document.querySelector<HTMLInputElement>("#patientDocumentId");
+  const patientBirthDateInput = document.querySelector<HTMLInputElement>("#patientBirthDate");
+  const patientGenderSelect = document.querySelector<HTMLSelectElement>("#patientGender");
+  const patientAgeInput = document.querySelector<HTMLInputElement>("#patientAge");
   const togglePassword =
     document.querySelector<HTMLButtonElement>("#toggle-password");
   const toggleConfirmPassword = document.querySelector<HTMLButtonElement>(
@@ -329,6 +423,112 @@
   );
   const strengthBar =
     document.querySelector<HTMLSpanElement>("#password-strength");
+
+  const normalizeDateOnly = (candidate: Date | null) => {
+    if (!candidate || Number.isNaN(candidate.getTime())) return null;
+    const clone = new Date(candidate.getTime());
+    clone.setHours(0, 0, 0, 0);
+    return clone;
+  };
+
+  const resolveBirthDate = () => {
+    if (!(patientBirthDateInput instanceof HTMLInputElement)) return null;
+    if (patientBirthDateInput.valueAsDate instanceof Date) {
+      return normalizeDateOnly(patientBirthDateInput.valueAsDate);
+    }
+    if (!patientBirthDateInput.value) return null;
+    return normalizeDateOnly(new Date(patientBirthDateInput.value));
+  };
+
+  const calculatePatientAge = () => {
+    const birth = resolveBirthDate();
+    if (!birth) return "";
+
+    const today = normalizeDateOnly(new Date());
+    if (!today) return "";
+
+    if (birth > today) return "";
+
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age -= 1;
+    }
+
+    return String(Math.max(age, 0));
+  };
+
+  const updatePatientAge = () => {
+    if (!(patientAgeInput instanceof HTMLInputElement)) return;
+    patientAgeInput.value = calculatePatientAge();
+  };
+
+  const validatePatientBirthDate = () => {
+    if (!(patientBirthDateInput instanceof HTMLInputElement)) return;
+
+    if (!roleSelect || roleSelect.value !== "patient") {
+      patientBirthDateInput.setCustomValidity("");
+      return;
+    }
+
+    if (!patientBirthDateInput.value) {
+      patientBirthDateInput.setCustomValidity("Selecciona tu fecha de nacimiento");
+      return;
+    }
+
+    const birth = resolveBirthDate();
+    if (!birth) {
+      patientBirthDateInput.setCustomValidity("Selecciona una fecha válida.");
+      return;
+    }
+
+    const today = normalizeDateOnly(new Date());
+    if (today && birth > today) {
+      patientBirthDateInput.setCustomValidity(
+        "La fecha de nacimiento no puede estar en el futuro.",
+      );
+      return;
+    }
+
+    patientBirthDateInput.setCustomValidity("");
+  };
+
+  const shouldRequirePatientInput = (input: HTMLInputElement | HTMLSelectElement) => {
+    return input.id !== "patientAge";
+  };
+
+  const togglePatientFields = () => {
+    const isPatient = roleSelect?.value === "patient";
+
+    patientSections.forEach((section) => {
+      section.classList.toggle("signup-patient-block--visible", Boolean(isPatient));
+    });
+
+    patientInputs.forEach((input) => {
+      if (shouldRequirePatientInput(input)) {
+        input.required = Boolean(isPatient);
+      } else {
+        input.required = false;
+      }
+
+      if (!isPatient) {
+        if (input instanceof HTMLInputElement) {
+          input.value = "";
+          input.setCustomValidity("");
+        } else if (input instanceof HTMLSelectElement) {
+          input.value = "";
+          input.selectedIndex = 0;
+        }
+      }
+    });
+
+    if (!isPatient && patientBirthDateInput instanceof HTMLInputElement) {
+      patientBirthDateInput.setCustomValidity("");
+    }
+
+    updatePatientAge();
+    validatePatientBirthDate();
+  };
 
   const toggleVisibility = (
     input: HTMLInputElement | null,
@@ -348,6 +548,19 @@
   toggleConfirmPassword?.addEventListener("click", () =>
     toggleVisibility(confirmInput, eyeConfirm, eyeOffConfirm)
   );
+
+  patientBirthDateInput?.addEventListener("change", () => {
+    updatePatientAge();
+    validatePatientBirthDate();
+  });
+
+  patientBirthDateInput?.addEventListener("input", () => {
+    updatePatientAge();
+    validatePatientBirthDate();
+  });
+
+  roleSelect?.addEventListener("change", togglePatientFields);
+  togglePatientFields();
 
   passwordInput?.addEventListener("input", () => {
     if (!strengthBar || !passwordInput) return;
@@ -380,6 +593,12 @@
         return;
       }
 
+      validatePatientBirthDate();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
       submitButton.disabled = true;
       submitButton.textContent = "Creando cuenta...";
 
@@ -389,6 +608,32 @@
       const password = formData.get("password") as string;
       const role = formData.get("role") as string;
 
+      updatePatientAge();
+  validatePatientBirthDate();
+
+      let patientProfile: Record<string, unknown> | undefined;
+      if (role === "patient") {
+        const patientProfileRaw = {
+          phone: (formData.get("patientPhone") as string | null)?.trim() || undefined,
+          documentId: (formData.get("patientDocumentId") as string | null)?.trim() || undefined,
+          birthDate: (formData.get("patientBirthDate") as string | null) || undefined,
+          gender: (formData.get("patientGender") as string | null) || undefined,
+          age: patientAgeInput?.value ? Number(patientAgeInput.value) : undefined,
+        };
+
+        const cleanedEntries = Object.entries(patientProfileRaw).filter(([, value]) => {
+          if (value === undefined || value === null || value === "") return false;
+          if (typeof value === "number") {
+            return Number.isFinite(value);
+          }
+          return true;
+        });
+
+        if (cleanedEntries.length) {
+          patientProfile = Object.fromEntries(cleanedEntries);
+        }
+      }
+
       if (!role) {
         errorMessageEl.textContent = "Selecciona un rol para continuar.";
         submitButton.disabled = false;
@@ -397,7 +642,7 @@
       }
 
       try {
-        await AuthModule.register({ fullName, email, password, role });
+        await AuthModule.register({ fullName, email, password, role, patientProfile });
         const parent = form.parentElement;
         if (parent) {
           parent.innerHTML = `
@@ -635,5 +880,39 @@
 
   .signup-success a:hover {
     text-decoration: underline;
+  }
+
+  .signup-patient-block {
+    display: none;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  .signup-patient-block--visible {
+    display: flex;
+  }
+
+  .signup-patient-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--auth-muted);
+  }
+
+  .signup-field-grid {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .signup-input-wrapper--plain {
+    display: block;
+  }
+
+  .signup-input-wrapper--plain .signup-input {
+    padding: 0.9rem 1rem;
   }
 </style>

@@ -13,8 +13,8 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
 
     <div class="admin-grid">
       <div class="admin-card">
-        <div class="admin-table-wrapper">
-          <table class="admin-table">
+        <div class="records-table-wrapper">
+          <table class="records-table">
             <thead>
               <tr>
                 <th>Paciente</th>
@@ -22,11 +22,11 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
                 <th>Síntomas</th>
                 <th>Preferencias</th>
                 <th>Estado</th>
-                <th></th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody data-requests-body>
-              <tr class="admin-empty">
+              <tr class="records-empty">
                 <td colspan="6">Cargando solicitudes...</td>
               </tr>
             </tbody>
@@ -166,48 +166,7 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
     box-shadow: var(--shadow-card);
   }
 
-  .admin-table-wrapper {
-    overflow-x: auto;
-    border-radius: 1rem;
-  }
-
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-admin-border);
-    vertical-align: top;
-  }
-
-  .admin-table th {
-    font-weight: 600;
-    color: var(--color-admin-table-header);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-  }
-
-  .admin-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .admin-table tbody tr:hover {
-    background: var(--color-admin-row-hover);
-  }
-
-  :global(.admin-empty td) {
-    text-align: center;
-    color: var(--color-muted);
-    font-size: 0.95rem;
-  }
-
-  :global(.admin-status) {
+  :global(.records-status) {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -220,24 +179,29 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
     color: #475569;
   }
 
-  :global(.admin-status--pending) {
+  :global(.records-status--pending) {
     background: rgba(37, 99, 235, 0.12);
     color: #1d4ed8;
   }
 
-  :global(.admin-status--confirmed) {
+  :global(.records-status--confirmed) {
     background: rgba(14, 159, 110, 0.16);
     color: #047857;
   }
 
-  :global(.admin-status--rejected) {
+  :global(.records-status--rejected) {
     background: rgba(220, 38, 38, 0.18);
     color: #b91c1c;
   }
 
-  :global(.admin-status--reschedule) {
+  :global(.records-status--reschedule) {
     background: rgba(234, 179, 8, 0.18);
     color: #b45309;
+  }
+
+  :global(.records-status--completed) {
+    background: rgba(16, 185, 129, 0.18);
+    color: #047857;
   }
 
   .admin-panel__description {
@@ -350,11 +314,37 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
     color: inherit;
   }
 
+  :global(.admin-button--success) {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.22), rgba(22, 163, 74, 0.1));
+    color: #047857;
+    box-shadow: 0 12px 26px -18px rgba(22, 163, 74, 0.45);
+    border: 1px solid rgba(22, 163, 74, 0.25);
+  }
+
+  :global(.admin-button--warning) {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
+    color: #92400e;
+    box-shadow: 0 12px 26px -18px rgba(234, 179, 8, 0.45);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+  }
+
   :global(.admin-button--primary:disabled) {
     opacity: 0.7;
     cursor: wait;
     box-shadow: none;
     border-color: transparent;
+  }
+
+  :global(
+      .admin-button--success:disabled,
+      .admin-button--secondary:disabled,
+      .admin-button--warning:disabled,
+      .admin-button--danger:disabled
+    ) {
+    opacity: 0.75;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
   }
 
   :global(.admin-button:not(:disabled):hover),
@@ -374,6 +364,12 @@ import appointmentRequestsClient from './appointment-requests.client.js?url';
 
   .admin-feedback--error {
     color: #dc2626;
+  }
+
+  :global(.records-row--request-highlight) {
+    outline: 2px solid rgba(37, 99, 235, 0.4);
+    outline-offset: 3px;
+    transition: outline-color 0.2s ease;
   }
 </style>
 

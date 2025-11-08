@@ -4,14 +4,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node -r dotenv/config index.js",
+  "start": "cross-env DOTENV_CONFIG_PATH=./.env node -r dotenv/config index.js",
     "test": "vitest",
-    "dev": "concurrently --names \"backend\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev node --watch -r dotenv/config index.js\"",
-    "prod": "cross-env NODE_ENV=prod node -r dotenv/config index.js",
-    "tables:create:prod": "cross-env NODE_ENV=prod node -r dotenv/config src/db/tables.js",
-    "tables:create:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/tables.js",
-    "seed:prod": "cross-env NODE_ENV=prod node -r dotenv/config src/db/seed.js",
-    "seed:dev": "cross-env NODE_ENV=dev node -r dotenv/config src/db/seed.js"
+    "dev": "concurrently --names \"backend\" -c \"bgBlue.bold,bgGreen.bold\" \"cross-env NODE_ENV=dev DOTENV_CONFIG_PATH=./.env node --watch -r dotenv/config index.js\"",
+    "prod": "cross-env NODE_ENV=prod DOTENV_CONFIG_PATH=./.env node -r dotenv/config index.js",
+    "tables:create:prod": "cross-env NODE_ENV=prod DOTENV_CONFIG_PATH=./.env node -r dotenv/config src/db/tables.js",
+    "tables:create:dev": "cross-env NODE_ENV=dev DOTENV_CONFIG_PATH=./.env node -r dotenv/config src/db/tables.js",
+    "seed:prod": "cross-env NODE_ENV=prod DOTENV_CONFIG_PATH=./.env node -r dotenv/config src/db/seed.js",
+    "seed:dev": "cross-env NODE_ENV=dev DOTENV_CONFIG_PATH=./.env node -r dotenv/config src/db/seed.js"
   },
   "keywords": [],
   "author": "",
