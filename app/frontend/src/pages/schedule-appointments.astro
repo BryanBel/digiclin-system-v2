@@ -119,7 +119,18 @@ const hasPrefillData = Object.values(combinedPrefill).some((value) => {
   return value !== null;
 });
 
-const prefill: PrefillData | null = hasPrefillData ? combinedPrefill : null;
+const fallbackPatientPrefill = sanitizePrefill(
+  isPatient
+    ? {
+        fullName: user?.full_name ?? user?.fullName ?? null,
+        email: user?.email ?? null,
+      }
+    : null,
+);
+
+const prefill: PrefillData | null = hasPrefillData ? combinedPrefill : isPatient ? fallbackPatientPrefill : null;
+
+const patientPrefill: PrefillData | null = isPatient ? prefill ?? fallbackPatientPrefill ?? emptyPrefill : null;
 
 const computeAgeFromDate = (dateInput?: string | null) => {
   if (!dateInput) return null;
@@ -137,7 +148,9 @@ const computeAgeFromDate = (dateInput?: string | null) => {
   return age >= 0 ? age : 0;
 };
 
-const prefillAge = typeof prefill?.age === 'number' ? prefill.age : computeAgeFromDate(prefill?.birthDate ?? undefined);
+const prefillAge = typeof patientPrefill?.age === 'number'
+  ? patientPrefill.age
+  : computeAgeFromDate((patientPrefill ?? prefill)?.birthDate ?? undefined);
 
 const envBackend = (import.meta.env.PUBLIC_BACKEND_URL ?? '').trim();
 const devBackend = import.meta.env.DEV ? 'http://localhost:3000' : '';
@@ -163,8 +176,10 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
           novalidate
           data-prefill={prefill ? JSON.stringify(prefill) : undefined}
           data-backend-url={backendEndpoint}
+          data-is-patient={isPatient ? 'true' : 'false'}
+          data-user-role={user?.role ?? ''}
         >
-          {isPatient && prefill ? (
+          {isPatient ? (
           <>
             <section class="request-profile" aria-label="Datos del paciente">
               <h2>Tu información registrada</h2>
@@ -175,51 +190,51 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
               <dl>
                 <div>
                   <dt>Nombre completo</dt>
-                  <dd>{prefill.fullName ?? 'Sin registro'}</dd>
+                  <dd data-field="fullName">{patientPrefill?.fullName ?? 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Correo electrónico</dt>
-                  <dd>{prefill.email ?? 'Sin registro'}</dd>
+                  <dd data-field="email">{patientPrefill?.email ?? 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Teléfono</dt>
-                  <dd>{prefill.phone ?? 'Sin registro'}</dd>
+                  <dd data-field="phone">{patientPrefill?.phone ?? 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Documento</dt>
-                  <dd>{prefill.documentId ?? 'Sin registro'}</dd>
+                  <dd data-field="documentId">{patientPrefill?.documentId ?? 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Fecha de nacimiento</dt>
-                  <dd>{prefill.birthDate ?? 'Sin registro'}</dd>
+                  <dd data-field="birthDate">{patientPrefill?.birthDate ?? 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Género</dt>
-                  <dd>
-                    {prefill.gender === 'female'
+                  <dd data-field="gender">
+                    {patientPrefill?.gender === 'female'
                       ? 'Femenino'
-                      : prefill.gender === 'male'
+                      : patientPrefill?.gender === 'male'
                       ? 'Masculino'
-                      : prefill.gender ?? 'Sin registro'}
+                      : patientPrefill?.gender ?? 'Sin registro'}
                   </dd>
                 </div>
                 <div>
                   <dt>Edad</dt>
-                  <dd>{typeof prefillAge === 'number' ? `${prefillAge} años` : 'Sin registro'}</dd>
+                  <dd data-field="age">{typeof prefillAge === 'number' ? `${prefillAge} años` : 'Sin registro'}</dd>
                 </div>
                 <div>
                   <dt>Rol</dt>
-                  <dd>Paciente</dd>
+                  <dd data-field="role">Paciente</dd>
                 </div>
               </dl>
             </section>
 
-            <input type="hidden" name="fullName" value={prefill.fullName ?? ''} />
-            <input type="hidden" name="email" value={prefill.email ?? ''} />
-            <input type="hidden" name="phone" value={prefill.phone ?? ''} />
-            <input type="hidden" name="documentId" value={prefill.documentId ?? ''} />
-            <input type="hidden" name="birthDate" value={prefill.birthDate ?? ''} />
-            <input type="hidden" name="gender" value={prefill.gender ?? ''} />
+            <input type="hidden" name="fullName" value={patientPrefill?.fullName ?? ''} />
+            <input type="hidden" name="email" value={patientPrefill?.email ?? ''} />
+            <input type="hidden" name="phone" value={patientPrefill?.phone ?? ''} />
+            <input type="hidden" name="documentId" value={patientPrefill?.documentId ?? ''} />
+            <input type="hidden" name="birthDate" value={patientPrefill?.birthDate ?? ''} />
+            <input type="hidden" name="gender" value={patientPrefill?.gender ?? ''} />
             <input type="hidden" name="age" value={typeof prefillAge === 'number' ? prefillAge : ''} />
           </>
         ) : (
@@ -347,25 +362,180 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
 </Layout>
 
 <style>
+  .request-shell {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: clamp(2rem, 6vw, 4rem);
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 55%),
+      #f4f7fb;
+  }
+
+  .request-card {
+    width: min(860px, 100%);
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 2rem;
+    padding: clamp(2rem, 4vw, 3rem);
+    box-shadow: 0 24px 60px -34px rgba(15, 23, 42, 0.35);
+  }
+
+  .request-header {
+    display: grid;
+    gap: 0.65rem;
+    text-align: center;
+    margin-bottom: clamp(1.75rem, 4vw, 2.5rem);
+  }
+
+  .request-header h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .request-header p {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #475569;
+  }
+
+  .request-form {
+    display: grid;
+    gap: clamp(1.25rem, 3vw, 1.75rem);
+  }
+
+  .request-grid {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .request-field {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .request-field span {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .request-field input,
+  .request-field select,
+  .request-field textarea {
+    width: 100%;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(248, 250, 252, 0.95);
+    padding: 0.85rem 1rem;
+    font-size: 0.98rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .request-field textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  .request-field input:focus-visible,
+  .request-field select:focus-visible,
+  .request-field textarea:focus-visible {
+    outline: none;
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    background: #ffffff;
+  }
+
+  .request-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: rgba(248, 250, 252, 0.9);
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .request-checkbox input {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: #2563eb;
+  }
+
+  .request-feedback {
+    min-height: 1.25rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1f2937;
+  }
+
+  .request-feedback--error {
+    color: #b91c1c;
+  }
+
+  .request-feedback--success {
+    color: #047857;
+  }
+
+  .request-submit {
+    align-self: start;
+    justify-self: center;
+    padding: 0.9rem 2.6rem;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .request-submit:hover,
+  .request-submit:focus-visible {
+    outline: none;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 38px -24px rgba(37, 99, 235, 0.6);
+  }
+
+  .request-login-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.95rem;
+    text-align: center;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .request-login-hint a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
   .request-profile {
     display: grid;
-    gap: 0.75rem;
-    padding: 1.25rem;
-    border-radius: 1rem;
-    background: rgba(37, 99, 235, 0.08);
-    border: 1px solid rgba(37, 99, 235, 0.2);
+    gap: 1rem;
+    padding: 1.6rem;
+    border-radius: 1.4rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(96, 165, 250, 0.12));
+    border: 1px solid rgba(96, 165, 250, 0.32);
+    box-shadow: 0 26px 48px -30px rgba(37, 99, 235, 0.35);
   }
 
   .request-profile h2 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 700;
+    color: #1d4ed8;
   }
 
   .request-profile p {
     margin: 0;
-    color: var(--color-muted);
+    color: rgba(30, 64, 175, 0.8);
     font-size: 0.95rem;
+    font-weight: 500;
   }
 
   .request-profile dl {
@@ -376,60 +546,52 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
   }
 
   .request-profile dl > div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    background: rgba(15, 23, 42, 0.35);
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   }
 
   .request-profile dt {
-    font-size: 0.75rem;
+    margin: 0;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-muted);
+    letter-spacing: 0.08em;
+    color: rgba(30, 64, 175, 0.75);
+    font-weight: 700;
   }
 
   .request-profile dd {
     margin: 0;
     min-height: 1.2rem;
     font-weight: 600;
+    color: #0f172a;
     word-break: break-word;
-  }
-
-  .request-login-hint {
-    margin: 0.75rem 0 0;
-    font-size: 0.95rem;
-    text-align: center;
-    color: var(--color-muted);
-  }
-
-  .request-login-hint a {
-    color: inherit;
-    text-decoration: underline;
-    font-weight: 600;
   }
 
   .request-info {
     display: grid;
     gap: 1rem;
-    padding: 2.5rem;
+    padding: 2.25rem;
     border-radius: 1.25rem;
-    border: 1px dashed rgba(59, 130, 246, 0.4);
-    background: rgba(59, 130, 246, 0.08);
+    border: 1px dashed rgba(59, 130, 246, 0.3);
+    background: rgba(219, 234, 254, 0.3);
     text-align: center;
   }
 
   .request-info h2 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.45rem;
     font-weight: 700;
+    color: #1f2937;
   }
 
   .request-info p {
     margin: 0;
-    color: var(--color-muted);
+    color: #475569;
     font-size: 1rem;
   }
 
@@ -441,356 +603,770 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
     gap: 0.5rem;
     padding: 0.85rem 1.8rem;
     border-radius: 999px;
-    background: var(--color-accent-primary, #3b82f6);
-    color: #fff;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #ffffff;
     font-weight: 600;
     text-decoration: none;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .request-info__link:hover {
+  .request-info__link:hover,
+  .request-info__link:focus-visible {
+    outline: none;
     transform: translateY(-2px);
-    box-shadow: 0 18px 40px -24px rgba(59, 130, 246, 0.65);
+    box-shadow: 0 18px 40px -24px rgba(79, 70, 229, 0.6);
+  }
+
+  :global(.dark) .request-shell {
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 55%),
+      var(--color-page-bg);
+  }
+
+  :global(.dark) .request-card {
+    background: rgba(21, 31, 50, 0.92);
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    box-shadow: 0 26px 64px -36px rgba(3, 6, 15, 0.85);
+  }
+
+  :global(.dark) .request-header h1 {
+    color: var(--color-body-text);
+  }
+
+  :global(.dark) .request-header p {
+    color: #b8c4d9;
+  }
+
+  :global(.dark) .request-field span {
+    color: #d6e1ff;
+  }
+
+  :global(.dark) .request-field input,
+  :global(.dark) .request-field select,
+  :global(.dark) .request-field textarea {
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    color: #f8fbff;
+  }
+
+  :global(.dark) .request-field input::placeholder,
+  :global(.dark) .request-field textarea::placeholder {
+    color: rgba(203, 213, 225, 0.7);
+  }
+
+  :global(.dark) .request-field input:focus-visible,
+  :global(.dark) .request-field select:focus-visible,
+  :global(.dark) .request-field textarea:focus-visible {
+    border-color: rgba(129, 140, 248, 0.6);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+    background: rgba(15, 23, 42, 0.98);
+  }
+
+  :global(.dark) .request-checkbox {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    color: #d6e1ff;
+  }
+
+  :global(.dark) .request-feedback {
+    color: #d6e1ff;
+  }
+
+  :global(.dark) .request-feedback--error {
+    color: #f87171;
+  }
+
+  :global(.dark) .request-feedback--success {
+    color: #34d399;
+  }
+
+  :global(.dark) .request-submit {
+    background: linear-gradient(135deg, #4f46e5, #2563eb);
+    box-shadow: none;
+  }
+
+  :global(.dark) .request-submit:hover,
+  :global(.dark) .request-submit:focus-visible {
+    box-shadow: 0 18px 40px -28px rgba(59, 130, 246, 0.6);
+  }
+
+  :global(.dark) .request-login-hint {
+    color: #cbd5f5;
+  }
+
+  :global(.dark) .request-login-hint a {
+    color: #93c5fd;
+  }
+
+  :global(.dark) .request-profile {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(79, 70, 229, 0.16));
+    border: 1px solid rgba(129, 140, 248, 0.28);
+    box-shadow: 0 28px 52px -32px rgba(15, 23, 42, 0.85);
+  }
+
+  :global(.dark) .request-profile h2 {
+    color: #dbeafe;
+  }
+
+  :global(.dark) .request-profile p {
+    color: #a5b4fc;
+  }
+
+  :global(.dark) .request-profile dl > div {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(129, 140, 248, 0.24);
+  }
+
+  :global(.dark) .request-profile dt {
+    color: #a5b4fc;
+  }
+
+  :global(.dark) .request-profile dd {
+    color: #f8fbff;
+  }
+
+  :global(.dark) .request-info {
+    border-color: rgba(129, 140, 248, 0.35);
+    background: rgba(24, 34, 58, 0.72);
+  }
+
+  :global(.dark) .request-info h2 {
+    color: #e2e9ff;
+  }
+
+  :global(.dark) .request-info p {
+    color: #cbd5f5;
+  }
+
+  :global(.dark) .request-info__link {
+    background: linear-gradient(135deg, #6366f1, #2563eb);
+  }
+
+  :global(.dark) .request-info__link:hover,
+  :global(.dark) .request-info__link:focus-visible {
+    box-shadow: 0 18px 40px -26px rgba(79, 70, 229, 0.7);
+  }
+
+  @media (max-width: 640px) {
+    .request-card {
+      padding: 1.75rem;
+      border-radius: 1.5rem;
+    }
+
+    .request-shell {
+      padding: clamp(1.5rem, 8vw, 3rem);
+    }
+
+    .request-field input,
+    .request-field select,
+    .request-field textarea {
+      border-radius: 0.8rem;
+    }
   }
 </style>
 
 {shouldRenderForm && (
   <script type="module">
     (() => {
-    const form = document.querySelector("#appointment-request-form");
-    const feedback = document.querySelector("#request-feedback");
+      const form = document.querySelector("#appointment-request-form");
+      const feedback = document.querySelector("#request-feedback");
 
-    if (!form || !feedback) {
-      return;
-    }
-
-    const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
-    const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
-    const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null"
-      ? runtimeOrigin
-      : "";
-
-    const datasetEndpoint = typeof form.dataset?.backendUrl === "string"
-      ? form.dataset.backendUrl.trim()
-      : "";
-    const rawProvidedEndpoint = datasetEndpoint || (env.PUBLIC_BACKEND_URL ?? "").trim();
-    const isDev = env.DEV === true || env.DEV === "true" || env.MODE === "development";
-    const devEndpoint = "http://localhost:3000";
-
-    let baseEndpoint = rawProvidedEndpoint;
-
-    if (!baseEndpoint) {
-      if (isDev) {
-        baseEndpoint = devEndpoint;
-      } else if (runtimeFallback) {
-        baseEndpoint = runtimeFallback;
+      if (!form || !feedback) {
+        return;
       }
-    }
 
-    if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
-      baseEndpoint = devEndpoint;
-    }
+      const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
+      const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+      const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null" ? runtimeOrigin : "";
 
-    if (!baseEndpoint) {
-      baseEndpoint = runtimeFallback || devEndpoint || "";
-    }
+      const datasetEndpoint =
+        typeof form.dataset?.backendUrl === "string" ? form.dataset.backendUrl.trim() : "";
+      const rawProvidedEndpoint = datasetEndpoint || (env.PUBLIC_BACKEND_URL ?? "").trim();
+      const isDev = env.DEV === true || env.DEV === "true" || env.MODE === "development";
+      const devEndpoint = "http://localhost:3000";
 
-    baseEndpoint = baseEndpoint
-      .replace(/\/$/, "")
-      .replace(/\/api$/, "");
+      let baseEndpoint = rawProvidedEndpoint;
 
-    const REQUESTS_ENDPOINT = `${baseEndpoint}/api/appointment-requests`;
-    const PATIENT_LOOKUP_ENDPOINT = `${baseEndpoint}/api/patients/lookup`;
+      if (!baseEndpoint) {
+        if (isDev) {
+          baseEndpoint = devEndpoint;
+        } else if (runtimeFallback) {
+          baseEndpoint = runtimeFallback;
+        }
+      }
 
-    const submitButton = form.querySelector(".request-submit");
-    if (!(submitButton instanceof HTMLButtonElement)) {
-      console.warn("No se encontró el botón de envío del formulario de citas.");
-      return;
-    }
-    const birthDateInput = form.querySelector("input[name='birthDate']");
-    const ageInput = form.querySelector("input[name='age']");
-    const fullNameInput = form.querySelector("input[name='fullName']");
-    const emailInput = form.querySelector("input[name='email']");
-    const phoneInput = form.querySelector("input[name='phone']");
-    const documentIdInput = form.querySelector("input[name='documentId']");
-    const genderSelect = form.querySelector("select[name='gender']");
-    const existingPatientCheckbox = form.querySelector("input[name='isExistingPatient']");
-    const existingPatientToggle =
-      existingPatientCheckbox instanceof HTMLInputElement &&
-      existingPatientCheckbox.type === "checkbox"
-        ? existingPatientCheckbox
+      if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
+        baseEndpoint = devEndpoint;
+      }
+
+      if (!baseEndpoint) {
+        baseEndpoint = runtimeFallback || devEndpoint || "";
+      }
+
+      baseEndpoint = baseEndpoint.replace(/\/$/, "").replace(/\/api$/, "");
+
+      const REQUESTS_ENDPOINT = `${baseEndpoint}/api/appointment-requests`;
+      const PATIENT_LOOKUP_ENDPOINT = `${baseEndpoint}/api/patients/lookup`;
+      const PATIENT_SELF_ENDPOINT = `${baseEndpoint}/api/patients/me`;
+
+      const submitButton = form.querySelector(".request-submit");
+      if (!(submitButton instanceof HTMLButtonElement)) {
+        console.warn("No se encontró el botón de envío del formulario de citas.");
+        return;
+      }
+
+      const birthDateInput = form.querySelector("input[name='birthDate']");
+      const ageInput = form.querySelector("input[name='age']");
+      const fullNameInput = form.querySelector("input[name='fullName']");
+      const emailInput = form.querySelector("input[name='email']");
+      const phoneInput = form.querySelector("input[name='phone']");
+      const documentIdInput = form.querySelector("input[name='documentId']");
+      const genderSelect = form.querySelector("select[name='gender']");
+      const genderHiddenInput =
+        genderSelect instanceof HTMLSelectElement ? null : form.querySelector("input[name='gender']");
+      const existingPatientCheckbox = form.querySelector("input[name='isExistingPatient']");
+      const existingPatientToggle =
+        existingPatientCheckbox instanceof HTMLInputElement && existingPatientCheckbox.type === "checkbox"
+          ? existingPatientCheckbox
+          : null;
+
+      const isPatientUser = form.dataset?.isPatient === "true";
+      const userRole = form.dataset?.userRole ?? "";
+      const DEFAULT_PROFILE_LABEL = "Sin registro";
+
+      const profileDisplayNodes = isPatientUser
+        ? {
+            fullName: form.querySelector("[data-field='fullName']"),
+            email: form.querySelector("[data-field='email']"),
+            phone: form.querySelector("[data-field='phone']"),
+            documentId: form.querySelector("[data-field='documentId']"),
+            birthDate: form.querySelector("[data-field='birthDate']"),
+            gender: form.querySelector("[data-field='gender']"),
+            age: form.querySelector("[data-field='age']"),
+            role: form.querySelector("[data-field='role']"),
+          }
         : null;
 
-    const FEEDBACK_CLASSES = ["request-feedback--error", "request-feedback--success"];
+      const FEEDBACK_CLASSES = ["request-feedback--error", "request-feedback--success"];
 
-    const setFeedbackMessage = (message = "", variant = null) => {
-      FEEDBACK_CLASSES.forEach((className) => feedback.classList.remove(className));
-      feedback.textContent = typeof message === "string" ? message : "";
-      if (variant === "error") {
-        feedback.classList.add("request-feedback--error");
-      } else if (variant === "success") {
-        feedback.classList.add("request-feedback--success");
-      }
-    };
+      const setFeedbackMessage = (message = "", variant = null) => {
+        FEEDBACK_CLASSES.forEach((className) => feedback.classList.remove(className));
+        feedback.textContent = typeof message === "string" ? message : "";
+        if (variant === "error") {
+          feedback.classList.add("request-feedback--error");
+        } else if (variant === "success") {
+          feedback.classList.add("request-feedback--success");
+        }
+      };
 
-    const clearFeedbackMessage = () => setFeedbackMessage("", null);
+      const clearFeedbackMessage = () => setFeedbackMessage("", null);
 
-    const normalizeDateOnly = (candidate) => {
-      if (!(candidate instanceof Date) || Number.isNaN(candidate.getTime())) return null;
-      const normalized = new Date(candidate.getTime());
-      normalized.setHours(0, 0, 0, 0);
-      return normalized;
-    };
+      const normalizeDateOnly = (candidate) => {
+        if (!(candidate instanceof Date) || Number.isNaN(candidate.getTime())) return null;
+        const normalized = new Date(candidate.getTime());
+        normalized.setHours(0, 0, 0, 0);
+        return normalized;
+      };
 
-    const resolveBirthDate = () => {
-      if (!(birthDateInput instanceof HTMLInputElement)) return null;
-      if (birthDateInput.valueAsDate instanceof Date) {
-        return normalizeDateOnly(birthDateInput.valueAsDate);
-      }
-      if (!birthDateInput.value) return null;
-      return normalizeDateOnly(new Date(birthDateInput.value));
-    };
+      const resolveBirthDate = () => {
+        if (!(birthDateInput instanceof HTMLInputElement)) return null;
+        if (birthDateInput.valueAsDate instanceof Date) {
+          return normalizeDateOnly(birthDateInput.valueAsDate);
+        }
+        if (!birthDateInput.value) return null;
+        return normalizeDateOnly(new Date(birthDateInput.value));
+      };
 
-    const calculateAge = () => {
-      const birth = resolveBirthDate();
-      if (!birth) return { value: "", error: birthDateInput?.value ? "Selecciona una fecha de nacimiento válida" : "" };
+      const calculateAge = () => {
+        const birth = resolveBirthDate();
+        if (!birth) {
+          return {
+            value: "",
+            error: birthDateInput?.value ? "Selecciona una fecha de nacimiento válida" : "",
+          };
+        }
 
-      const today = normalizeDateOnly(new Date());
-      if (!today) return { value: "", error: "No se pudo calcular la fecha actual" };
+        const today = normalizeDateOnly(new Date());
+        if (!today) {
+          return { value: "", error: "No se pudo calcular la fecha actual" };
+        }
 
-      if (birth > today) {
-        return { value: "", error: "La fecha de nacimiento no puede estar en el futuro" };
-      }
+        if (birth > today) {
+          return { value: "", error: "La fecha de nacimiento no puede estar en el futuro" };
+        }
 
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age -= 1;
-      }
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age -= 1;
+        }
 
-      return { value: String(Math.max(age, 0)), error: "" };
-    };
+        return { value: String(Math.max(age, 0)), error: "" };
+      };
 
-    const refreshAgeField = () => {
-      if (!ageInput) return;
-      const { value, error } = calculateAge();
-      ageInput.value = value;
+      const patientPrefillCache = new Map();
 
-      if (birthDateInput instanceof HTMLInputElement) {
-        birthDateInput.setCustomValidity(error);
-        if (error) {
-          birthDateInput.reportValidity();
+      function parsePrefillDataset() {
+        const rawPrefill = form.dataset?.prefill ?? "";
+        if (!rawPrefill) return null;
+        try {
+          const parsed = JSON.parse(rawPrefill);
+          return parsed && typeof parsed === "object" ? parsed : null;
+        } catch (error) {
+          console.warn("No se pudo interpretar el prefill incrustado en el formulario:", error);
+          return null;
         }
       }
-    };
 
-    const patientPrefillCache = new Map();
+      function normalizeGenderValue(value) {
+        if (typeof value !== "string") return null;
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        const normalized = trimmed.toLowerCase();
+        if (normalized === "female" || normalized === "femenino") return "female";
+        if (normalized === "male" || normalized === "masculino") return "male";
+        return trimmed;
+      }
 
-    const hasRelevantPatientData = (patient) => {
-      if (!patient || typeof patient !== "object") return false;
-      const keysToCheck = [
-        "fullName",
-        "phone",
-        "documentId",
-        "birthDate",
-        "gender",
-        "age",
-      ];
+      function ensureDateOnlyString(candidate) {
+        if (!candidate) return "";
+        if (candidate instanceof Date) {
+          return Number.isNaN(candidate.getTime()) ? "" : candidate.toISOString().slice(0, 10);
+        }
+        if (typeof candidate === "string") {
+          const trimmed = candidate.trim();
+          if (!trimmed) return "";
+          if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            return trimmed;
+          }
+          const parsed = new Date(trimmed);
+          if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toISOString().slice(0, 10);
+          }
+          return trimmed;
+        }
+        return "";
+      }
 
-      return keysToCheck.some((key) => {
-        const value = patient[key];
-        if (typeof value === "number") {
-          return Number.isFinite(value);
+      function readOptionalString(value) {
+        if (typeof value !== "string") return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      }
+
+      function readOptionalNumber(value) {
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return value;
         }
         if (typeof value === "string") {
-          return value.trim().length > 0;
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          const parsed = Number(trimmed);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
         }
-        return Boolean(value);
-      });
-    };
+        return null;
+      }
 
-    const applyPatientPrefill = (patient) => {
-      if (!patient) return;
+      function normalizePrefill(candidate) {
+        const normalized = {
+          fullName: null,
+          email: null,
+          phone: null,
+          documentId: null,
+          birthDate: null,
+          gender: null,
+          age: null,
+        };
 
-      const ensureString = (value) => (typeof value === "string" ? value : "");
+        if (!candidate || typeof candidate !== "object") {
+          return normalized;
+        }
 
-      if (fullNameInput instanceof HTMLInputElement) {
-        fullNameInput.value = ensureString(patient.fullName);
+        normalized.fullName = readOptionalString(candidate.fullName ?? candidate.full_name) ?? null;
+        normalized.email = readOptionalString(candidate.email) ?? null;
+        normalized.phone = readOptionalString(candidate.phone) ?? null;
+        normalized.documentId =
+          readOptionalString(candidate.documentId ?? candidate.document_id) ?? null;
+
+        const birthCandidate =
+          candidate.birthDate ?? candidate.birth_date ?? candidate.birthdate ?? null;
+        const birthDateString = ensureDateOnlyString(birthCandidate);
+        normalized.birthDate = birthDateString || null;
+
+        const genderValue = normalizeGenderValue(candidate.gender ?? candidate.sex ?? candidate.gender_id);
+        normalized.gender = genderValue ?? null;
+
+        const ageValue = readOptionalNumber(candidate.age);
+        normalized.age = ageValue ?? null;
+
+        return normalized;
       }
-      if (emailInput instanceof HTMLInputElement) {
-        emailInput.value = ensureString(patient.email);
+
+      function updateDatasetPrefill(prefill) {
+        if (!prefill || typeof prefill !== "object") return;
+        try {
+          form.dataset.prefill = JSON.stringify(prefill);
+        } catch {
+          form.dataset.prefill = "";
+        }
       }
-      if (phoneInput instanceof HTMLInputElement) {
-        phoneInput.value = ensureString(patient.phone);
+
+      function setInputValue(input, value) {
+        if (!(input instanceof HTMLInputElement)) return;
+        let stringValue = "";
+        if (typeof value === "number" && Number.isFinite(value)) {
+          stringValue = String(value);
+        } else if (typeof value === "string") {
+          stringValue = value;
+        }
+        input.value = stringValue;
+        input.defaultValue = stringValue;
       }
-      if (documentIdInput instanceof HTMLInputElement) {
-        documentIdInput.value = ensureString(patient.documentId);
-      }
-      if (birthDateInput instanceof HTMLInputElement && typeof patient.birthDate === "string") {
-        birthDateInput.value = patient.birthDate;
-      }
-      if (genderSelect instanceof HTMLSelectElement && typeof patient.gender === "string") {
-        const normalizedGender = patient.gender.toLowerCase();
-        const optionExists = Array.from(genderSelect.options).some(
-          (option) => option.value.toLowerCase() === normalizedGender,
+
+      function setSelectValue(select, value) {
+        if (!(select instanceof HTMLSelectElement)) return;
+        if (typeof value !== "string" || !value.trim()) {
+          select.value = "";
+          select.defaultValue = "";
+          return;
+        }
+        const normalized = value.trim().toLowerCase();
+        const match = Array.from(select.options).find(
+          (option) => option.value.toLowerCase() === normalized,
         );
-        if (optionExists) {
-          genderSelect.value = normalizedGender;
+        if (match) {
+          select.value = match.value;
+          select.defaultValue = match.value;
+        } else {
+          select.value = "";
+          select.defaultValue = "";
         }
       }
-      if (ageInput instanceof HTMLInputElement && typeof patient.age === "number") {
-        ageInput.value = String(patient.age);
+
+      function getRoleLabel(role) {
+        if (!role) {
+          return isPatientUser ? "Paciente" : "";
+        }
+        const normalized = role.trim().toLowerCase();
+        if (normalized === "patient") return "Paciente";
+        if (normalized === "doctor") return "Doctor";
+        if (normalized === "admin") return "Administrador";
+        return role;
       }
 
-      refreshAgeField();
-    };
-
-    const fetchPatientProfile = async (email) => {
-      const cached = patientPrefillCache.get(email);
-      if (cached) return cached;
-
-      const lookupUrl = `${PATIENT_LOOKUP_ENDPOINT}?email=${encodeURIComponent(email)}`;
-      const response = await fetch(lookupUrl, {
-        credentials: "include",
-      });
-
-      const contentType = response.headers.get("content-type") ?? "";
-      const isJson = contentType.includes("application/json");
-      const parsedBody = isJson
-        ? await response.json().catch(() => ({}))
-        : await response.text().catch(() => "");
-
-      if (!response.ok) {
-        const message =
-          (typeof parsedBody === "string" && parsedBody) ||
-          parsedBody?.error ||
-          parsedBody?.message ||
-          "No se pudo obtener los datos del paciente";
-        const error = new Error(message);
-        Object.assign(error, { status: response.status });
-        throw error;
+      function formatGenderLabel(value) {
+        if (typeof value !== "string") return "";
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "female" || normalized === "femenino") return "Femenino";
+        if (normalized === "male" || normalized === "masculino") return "Masculino";
+        return value.trim();
       }
 
-      const patient = parsedBody?.patient ?? null;
-      if (patient) {
-        patientPrefillCache.set(email, patient);
+      function updateProfileDisplay() {
+        if (!profileDisplayNodes) return;
+
+        const readValue = (element) => {
+          if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
+            return element.value.trim();
+          }
+          return "";
+        };
+
+        const assign = (node, value, formatter) => {
+          if (!node) return;
+          const baseValue = typeof formatter === "function" ? formatter(value) : value;
+          node.textContent =
+            typeof baseValue === "string" && baseValue.trim().length > 0
+              ? baseValue
+              : DEFAULT_PROFILE_LABEL;
+        };
+
+        assign(profileDisplayNodes.fullName, readValue(fullNameInput));
+        assign(profileDisplayNodes.email, readValue(emailInput));
+        assign(profileDisplayNodes.phone, readValue(phoneInput));
+        assign(profileDisplayNodes.documentId, readValue(documentIdInput));
+        assign(profileDisplayNodes.birthDate, readValue(birthDateInput));
+
+        const genderValue =
+          genderSelect instanceof HTMLSelectElement
+            ? genderSelect.value
+            : genderHiddenInput instanceof HTMLInputElement
+            ? genderHiddenInput.value
+            : "";
+        assign(profileDisplayNodes.gender, genderValue, formatGenderLabel);
+
+        assign(
+          profileDisplayNodes.age,
+          readValue(ageInput),
+          (value) => (value ? `${value} años` : ""),
+        );
+
+        assign(profileDisplayNodes.role, getRoleLabel(userRole));
       }
-      return patient;
-    };
 
-    const handleExistingPatientToggle = async () => {
-      if (!existingPatientToggle?.checked) {
-        return;
-      }
-
-      const emailValue =
-        emailInput instanceof HTMLInputElement ? emailInput.value.trim().toLowerCase() : "";
-
-      if (!emailValue) {
-        setFeedbackMessage("Ingresa tu correo antes de marcar que ya eres paciente.", "error");
-        existingPatientToggle.checked = false;
-        emailInput?.focus();
-        return;
-      }
-
-      try {
-        existingPatientToggle.disabled = true;
-        setFeedbackMessage("Buscando tu perfil de paciente registrado...", null);
-
-        const patient = await fetchPatientProfile(emailValue);
-
-        if (!patient || !hasRelevantPatientData(patient)) {
-          setFeedbackMessage(
-            "Aún no encontramos datos de paciente con ese correo. Regístrate para completar tu información.",
-            "error",
-          );
-          existingPatientToggle.checked = false;
+      function refreshAgeField() {
+        if (!(ageInput instanceof HTMLInputElement)) {
+          updateProfileDisplay();
           return;
         }
 
-        applyPatientPrefill(patient);
-        setFeedbackMessage("Hemos completado tus datos registrados en DigiClin.", "success");
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "No se pudo buscar tu perfil de paciente.";
-        setFeedbackMessage(message, "error");
-        existingPatientToggle.checked = false;
-      } finally {
-        existingPatientToggle.disabled = false;
+        const { value, error } = calculateAge();
+        setInputValue(ageInput, value);
+
+        if (birthDateInput instanceof HTMLInputElement) {
+          birthDateInput.setCustomValidity(error);
+          if (error && birthDateInput.type !== "hidden") {
+            birthDateInput.reportValidity();
+          }
+        }
+
+        updateProfileDisplay();
+      }
+
+      function applyPatientPrefill(patient) {
+        const normalized = normalizePrefill(patient);
+
+        updateDatasetPrefill(normalized);
+
+        setInputValue(fullNameInput, normalized.fullName);
+        setInputValue(emailInput, normalized.email);
+        setInputValue(phoneInput, normalized.phone);
+        setInputValue(documentIdInput, normalized.documentId);
+
+        if (birthDateInput instanceof HTMLInputElement) {
+          setInputValue(birthDateInput, normalized.birthDate ?? "");
+        }
+
+        if (genderSelect instanceof HTMLSelectElement) {
+          setSelectValue(genderSelect, normalized.gender ?? "");
+        } else if (genderHiddenInput instanceof HTMLInputElement) {
+          setInputValue(genderHiddenInput, normalized.gender ?? "");
+        }
+
+        if (ageInput instanceof HTMLInputElement) {
+          setInputValue(ageInput, normalized.age ?? "");
+        }
+
         refreshAgeField();
-      }
-    };
-
-    existingPatientToggle?.addEventListener("change", handleExistingPatientToggle);
-
-    birthDateInput?.addEventListener("change", refreshAgeField);
-    birthDateInput?.addEventListener("input", refreshAgeField);
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      clearFeedbackMessage();
-      refreshAgeField();
-      if (!form.reportValidity()) {
-        return;
+        return normalized;
       }
 
-      submitButton.disabled = true;
-      submitButton.textContent = "Enviando...";
+      function hasRelevantPatientData(patient) {
+        if (!patient || typeof patient !== "object") return false;
+        const normalized = normalizePrefill(patient);
+        return Boolean(
+          normalized.fullName ||
+            normalized.phone ||
+            normalized.documentId ||
+            normalized.birthDate ||
+            normalized.gender ||
+            (typeof normalized.age === "number" && Number.isFinite(normalized.age)),
+        );
+      }
 
-      const formData = new FormData(form);
-      const payload = {
-        fullName: formData.get("fullName")?.toString().trim(),
-        email: formData.get("email")?.toString().trim(),
-        phone: formData.get("phone")?.toString().trim(),
-        documentId: formData.get("documentId")?.toString().trim(),
-        birthDate: formData.get("birthDate")?.toString(),
-        gender: formData.get("gender")?.toString() || undefined,
-        age: ageInput?.value ? Number(ageInput.value) : undefined,
-        symptoms: formData.get("symptoms")?.toString().trim(),
-        preferredDate: formData.get("preferredDate") || undefined,
-        preferredTimeRange: formData.get("preferredTimeRange") || undefined,
-        isExistingPatient: formData.get("isExistingPatient") === "on",
-      };
+      function parseEmailKey(email) {
+        return typeof email === "string" ? email.trim().toLowerCase() : "";
+      }
 
-      try {
-        const response = await fetch(REQUESTS_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      async function fetchPatientProfile(email) {
+        const cacheKey = parseEmailKey(email);
+        if (!cacheKey) return null;
+
+        const cached = patientPrefillCache.get(cacheKey);
+        if (cached) return cached;
+
+        const lookupUrl = `${PATIENT_LOOKUP_ENDPOINT}?email=${encodeURIComponent(cacheKey)}`;
+        const response = await fetch(lookupUrl, {
           credentials: "include",
-          body: JSON.stringify(payload),
+          headers: { accept: "application/json" },
         });
 
         const contentType = response.headers.get("content-type") ?? "";
-        const isJsonResponse = contentType.includes("application/json");
-        const parsedBody = isJsonResponse
+        const isJson = contentType.includes("application/json");
+        const parsedBody = isJson
           ? await response.json().catch(() => ({}))
           : await response.text().catch(() => "");
 
         if (!response.ok) {
-          const message = (typeof parsedBody === "string" && parsedBody) || parsedBody?.error || parsedBody?.message;
-          throw new Error(message || "No se pudo enviar la solicitud");
+          const message =
+            (typeof parsedBody === "string" && parsedBody) ||
+            parsedBody?.error ||
+            parsedBody?.message ||
+            "No se pudo obtener los datos del paciente";
+          const error = new Error(message);
+          Object.assign(error, { status: response.status });
+          throw error;
         }
 
-        setFeedbackMessage(
-          "Solicitud enviada correctamente. Revisa tu correo para más detalles.",
-          "success",
-        );
-        form.reset();
-        existingPatientToggle?.blur();
-        if (existingPatientToggle) {
-          existingPatientToggle.checked = false;
+        const patient = parsedBody && typeof parsedBody === "object" ? parsedBody.patient : null;
+        if (!patient) {
+          return null;
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "No se pudo enviar la solicitud";
-        setFeedbackMessage(message, "error");
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = "Enviar solicitud";
+
+        const normalized = normalizePrefill(patient);
+        patientPrefillCache.set(cacheKey, normalized);
+        return normalized;
+      }
+
+      async function hydratePatientProfileFromBackend() {
+        try {
+          const response = await fetch(PATIENT_SELF_ENDPOINT, {
+            credentials: "include",
+            headers: { accept: "application/json" },
+          });
+
+          const contentType = response.headers.get("content-type") ?? "";
+          const isJson = contentType.includes("application/json");
+          const parsedBody = isJson
+            ? await response.json().catch(() => ({}))
+            : await response.text().catch(() => "");
+
+          if (!response.ok) {
+            return;
+          }
+
+          const patient = parsedBody && typeof parsedBody === "object" ? parsedBody.patient : null;
+          if (!patient) {
+            return;
+          }
+
+          const normalized = applyPatientPrefill(patient);
+          const emailKey = normalized?.email ? parseEmailKey(normalized.email) : "";
+          if (emailKey) {
+            patientPrefillCache.set(emailKey, normalized);
+          }
+        } catch (error) {
+          console.warn("No se pudo hidratar el perfil del paciente desde el backend.", error);
+        }
+      }
+
+      const storedPrefill = parsePrefillDataset();
+      if (storedPrefill) {
+        applyPatientPrefill(storedPrefill);
+      } else {
         refreshAgeField();
       }
-    });
 
-    refreshAgeField();
+      const handleExistingPatientToggle = async () => {
+        if (!existingPatientToggle?.checked) {
+          return;
+        }
+
+        const emailValue =
+          emailInput instanceof HTMLInputElement ? emailInput.value.trim().toLowerCase() : "";
+
+        if (!emailValue) {
+          setFeedbackMessage("Ingresa tu correo antes de marcar que ya eres paciente.", "error");
+          existingPatientToggle.checked = false;
+          emailInput?.focus();
+          return;
+        }
+
+        try {
+          existingPatientToggle.disabled = true;
+          setFeedbackMessage("Buscando tu perfil de paciente registrado...", null);
+
+          const patient = await fetchPatientProfile(emailValue);
+
+          if (!patient || !hasRelevantPatientData(patient)) {
+            setFeedbackMessage(
+              "Aún no encontramos datos de paciente con ese correo. Regístrate para completar tu información.",
+              "error",
+            );
+            existingPatientToggle.checked = false;
+            return;
+          }
+
+          applyPatientPrefill(patient);
+          setFeedbackMessage("Hemos completado tus datos registrados en DigiClin.", "success");
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "No se pudo buscar tu perfil de paciente.";
+          setFeedbackMessage(message, "error");
+          existingPatientToggle.checked = false;
+        } finally {
+          existingPatientToggle.disabled = false;
+          refreshAgeField();
+        }
+      };
+
+      existingPatientToggle?.addEventListener("change", handleExistingPatientToggle);
+
+      birthDateInput?.addEventListener("change", refreshAgeField);
+      birthDateInput?.addEventListener("input", refreshAgeField);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        clearFeedbackMessage();
+        refreshAgeField();
+        if (!form.reportValidity()) {
+          return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+
+        const formData = new FormData(form);
+        const payload = {
+          fullName: formData.get("fullName")?.toString().trim(),
+          email: formData.get("email")?.toString().trim(),
+          phone: formData.get("phone")?.toString().trim(),
+          documentId: formData.get("documentId")?.toString().trim(),
+          birthDate: formData.get("birthDate")?.toString(),
+          gender: formData.get("gender")?.toString() || undefined,
+          age: ageInput?.value ? Number(ageInput.value) : undefined,
+          symptoms: formData.get("symptoms")?.toString().trim(),
+          preferredDate: formData.get("preferredDate") || undefined,
+          preferredTimeRange: formData.get("preferredTimeRange") || undefined,
+          isExistingPatient: formData.get("isExistingPatient") === "on",
+        };
+
+        try {
+          const response = await fetch(REQUESTS_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          });
+
+          const contentType = response.headers.get("content-type") ?? "";
+          const isJsonResponse = contentType.includes("application/json");
+          const parsedBody = isJsonResponse
+            ? await response.json().catch(() => ({}))
+            : await response.text().catch(() => "");
+
+          if (!response.ok) {
+            const message =
+              (typeof parsedBody === "string" && parsedBody) ||
+              parsedBody?.error ||
+              parsedBody?.message;
+            throw new Error(message || "No se pudo enviar la solicitud");
+          }
+
+          setFeedbackMessage(
+            "Solicitud enviada correctamente. Revisa tu correo para más detalles.",
+            "success",
+          );
+          form.reset();
+          refreshAgeField();
+          existingPatientToggle?.blur();
+          if (existingPatientToggle) {
+            existingPatientToggle.checked = false;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "No se pudo enviar la solicitud";
+          setFeedbackMessage(message, "error");
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = "Enviar solicitud";
+          refreshAgeField();
+        }
+      });
+
+      if (isPatientUser) {
+        hydratePatientProfileFromBackend();
+      }
     })();
   </script>
 )}
