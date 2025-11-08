@@ -1,6 +1,11 @@
 ---
 import AuthUnprotected from "../features/auth/AuthUnprotected.astro";
 import Layout from "../layouts/Layout.astro";
+
+const envBackend = (import.meta.env.PUBLIC_BACKEND_URL ?? '').trim();
+const devBackend = import.meta.env.DEV ? 'http://localhost:3000' : '';
+const currentOrigin = Astro.url?.origin ?? '';
+const backendEndpoint = envBackend || devBackend || currentOrigin;
 ---
 
 <Layout title="DigiClin | Inicia sesión">
@@ -40,7 +45,12 @@ import Layout from "../layouts/Layout.astro";
             </p>
           </header>
 
-          <form id="login-form" class="auth-form" novalidate>
+          <form
+            id="login-form"
+            class="auth-form"
+            novalidate
+            data-backend-url={backendEndpoint}
+          >
             <div class="auth-field">
               <label class="auth-label" for="email">Email o usuario</label>
               <div class="auth-input-wrapper">
@@ -158,6 +168,7 @@ import Layout from "../layouts/Layout.astro";
             <button id="submit-button" type="submit" class="auth-submit"
               >Iniciar sesión</button
             >
+            <p id="login-feedback" class="auth-feedback" role="status"></p>
           </form>
 
           <footer class="auth-footer">
@@ -170,59 +181,214 @@ import Layout from "../layouts/Layout.astro";
   </AuthUnprotected>
 </Layout>
 
-<script>
-  import { BACK_ENDPOINT } from "../config/endpoint.js";
-  import AuthModule from "../features/auth/authModule.js";
-  import { createNotification } from "../features/notifications/notification";
+<script type="module">
+  const form = document.querySelector("#login-form");
+  const submitButton = document.querySelector("#submit-button");
+  const togglePasswordButton = document.querySelector("#toggle-password");
+  const passwordInput = document.querySelector("#password");
+  const iconEye = document.querySelector("#icon-eye");
+  const iconEyeOff = document.querySelector("#icon-eye-off");
+  const feedbackEl = document.querySelector("#login-feedback");
 
-  // DOM Element Selection
-  const form = document.querySelector<HTMLFormElement>("#login-form");
-  const submitButton =
-    document.querySelector<HTMLButtonElement>("#submit-button");
-  const togglePasswordButton =
-    document.querySelector<HTMLButtonElement>("#toggle-password");
-  const passwordInput = document.querySelector<HTMLInputElement>("#password");
-  const iconEye = document.querySelector<SVGElement>("#icon-eye");
-  const iconEyeOff = document.querySelector<SVGElement>("#icon-eye-off");
+  const LINKED_STORAGE_KEY = "digiclinLinkedRequestInfo";
+
+  const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
+  const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const datasetBackend =
+    form instanceof HTMLFormElement && typeof form.dataset.backendUrl === "string"
+      ? form.dataset.backendUrl.trim()
+      : "";
+  const envBackend = typeof env.PUBLIC_BACKEND_URL === "string" ? env.PUBLIC_BACKEND_URL.trim() : "";
+  const devEndpoint = env.DEV === true || env.DEV === "true" ? "http://localhost:3000" : "";
+
+  const baseEndpoint = (() => {
+    const candidates = [datasetBackend, envBackend, devEndpoint, runtimeOrigin];
+    for (const candidate of candidates) {
+      if (candidate) return candidate.replace(/\/$/, "");
+    }
+    return "";
+  })();
+
+  const resolveEndpoint = (path) => {
+    if (!path) return baseEndpoint;
+    if (/^https?:\/\//i.test(path)) return path;
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    return baseEndpoint ? `${baseEndpoint}${normalized}` : normalized;
+  };
+
+  const FEEDBACK_CLASSES = {
+    success: "auth-feedback--success",
+    error: "auth-feedback--error",
+    info: "auth-feedback--info",
+  };
+
+  const storeLinkedInfo = ({ token, message, status }) => {
+    if (typeof window === "undefined" || !token) return;
+    try {
+      const payload = JSON.stringify({
+        token,
+        message: message ?? null,
+        status: status ?? null,
+        timestamp: Date.now(),
+      });
+      window.sessionStorage.setItem(LINKED_STORAGE_KEY, payload);
+    } catch (error) {
+      console.warn("No se pudo guardar el estado de vinculación", error);
+    }
+  };
+
+  const setFeedback = (message, variant = "info") => {
+    if (!(feedbackEl instanceof HTMLElement)) return;
+    Object.values(FEEDBACK_CLASSES).forEach((className) => feedbackEl.classList.remove(className));
+    if (FEEDBACK_CLASSES[variant]) {
+      feedbackEl.classList.add(FEEDBACK_CLASSES[variant]);
+    }
+    feedbackEl.textContent = message ?? "";
+  };
 
   togglePasswordButton?.addEventListener("click", () => {
-    if (!passwordInput) return;
+    if (!(passwordInput instanceof HTMLInputElement)) return;
     const isHidden = passwordInput.type === "password";
     passwordInput.type = isHidden ? "text" : "password";
     iconEye?.classList.toggle("auth-input-action-icon--hidden", !isHidden);
     iconEyeOff?.classList.toggle("auth-input-action-icon--hidden", isHidden);
   });
 
-  if (form && submitButton) {
+  const parseErrorMessage = async (response) => {
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      try {
+        const data = await response.json();
+        if (data && typeof data === "object") {
+          return data.error || data.message || null;
+        }
+      } catch (error) {
+        return null;
+      }
+    } else {
+      try {
+        const text = await response.text();
+        return text || null;
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const attemptLinkPendingToken = async () => {
+    if (typeof window === "undefined") return;
+    const pendingToken = window.localStorage.getItem("digiclinPendingLinkToken");
+    if (!pendingToken) return;
+
+    try {
+      const response = await fetch(resolveEndpoint("/api/appointment-requests/link"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token: pendingToken }),
+      });
+
+      const contentType = response.headers.get("content-type") ?? "";
+      const isJson = contentType.includes("application/json");
+      const parsed = isJson
+        ? await response.json().catch(() => null)
+        : await response.text().catch(() => null);
+
+      if (response.ok) {
+        const payload =
+          parsed && typeof parsed === "object"
+            ? parsed
+            : { message: typeof parsed === "string" ? parsed : null };
+        storeLinkedInfo({
+          token: pendingToken,
+          message:
+            typeof payload?.message === "string"
+              ? payload.message
+              : "Tu solicitud se vinculó correctamente a tu cuenta.",
+          status: typeof payload?.status === "string" ? payload.status : null,
+        });
+        window.localStorage.removeItem("digiclinPendingLinkToken");
+      } else {
+        const message =
+          (parsed && typeof parsed === "object" && parsed !== null && (parsed.error || parsed.message)) ||
+          (typeof parsed === "string" && parsed) ||
+          "No se pudo vincular la solicitud";
+        console.warn(message);
+      }
+    } catch (error) {
+      console.warn("Fallo al vincular automáticamente la solicitud", error);
+    }
+  };
+
+  if (form instanceof HTMLFormElement && submitButton instanceof HTMLButtonElement) {
     const originalButtonText = submitButton.textContent;
 
-    form.addEventListener("submit", async (event: SubmitEvent) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      setFeedback("", "info");
+
+      if (!(passwordInput instanceof HTMLInputElement)) return;
+      const emailInput = form.querySelector("#email");
+      const email = emailInput instanceof HTMLInputElement ? emailInput.value.trim() : "";
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        setFeedback("Completa tu correo y contraseña para continuar.", "error");
+        return;
+      }
 
       submitButton.disabled = true;
       submitButton.textContent = "Iniciando...";
 
-      const formData = new FormData(form);
-      const email = formData.get("email") as string;
-      const password = formData.get("password") as string;
-
       try {
-        await AuthModule.login({ email, password });
-        window.location.assign("/");
-      } catch (error: any) {
-        console.error("Login failed:", error);
-        const errorData = await error?.response?.json().catch(() => null);
-        createNotification({
-          title: "Ups! Hubo un error",
-          description:
-            errorData?.error ??
-            "Credenciales incorrectas o problema del servidor.",
-          type: "error",
+        const response = await fetch(resolveEndpoint("/api/auth/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
         });
+
+        if (!response.ok) {
+          const message =
+            (await parseErrorMessage(response)) ||
+            "Credenciales incorrectas o problema del servidor.";
+          throw new Error(message);
+        }
+
+        await attemptLinkPendingToken();
+
+        const nextUrl = new URLSearchParams(window.location.search).get("next");
+        window.location.assign(nextUrl || "/");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo iniciar sesión.";
+        setFeedback(message, "error");
       } finally {
         submitButton.disabled = false;
-        submitButton.textContent = originalButtonText;
+        submitButton.textContent = originalButtonText ?? "Iniciar sesión";
       }
     });
   }
 </script>
+
+<style>
+  .auth-feedback {
+    min-height: 1.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #4b5563);
+    transition: color 150ms ease, opacity 150ms ease;
+  }
+
+  .auth-feedback--success {
+    color: var(--color-success, #16a34a);
+  }
+
+  .auth-feedback--error {
+    color: var(--color-error, #dc2626);
+  }
+
+  .auth-feedback--info {
+    color: var(--color-info, #2563eb);
+  }
+</style>

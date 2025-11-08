@@ -13,8 +13,8 @@ import appointmentsClient from './appointments.client.js?url';
     </header>
 
     <div class="admin-card">
-      <div class="admin-table-wrapper">
-        <table class="admin-table">
+      <div class="records-table-wrapper">
+        <table class="records-table">
           <thead>
             <tr>
               <th>Paciente</th>
@@ -25,7 +25,7 @@ import appointmentsClient from './appointments.client.js?url';
             </tr>
           </thead>
           <tbody data-appointments-body>
-            <tr class="admin-empty">
+            <tr class="records-empty">
               <td colspan="5">Cargando citas...</td>
             </tr>
           </tbody>
@@ -34,6 +34,8 @@ import appointmentsClient from './appointments.client.js?url';
     </div>
   </section>
 </Layout>
+
+<script type="module" src={appointmentsClient}></script>
 
 <style>
   .admin-shell {
@@ -65,51 +67,27 @@ import appointmentsClient from './appointments.client.js?url';
     padding: clamp(1.5rem, 3vw, 2rem);
     box-shadow: var(--shadow-card);
   }
-  .admin-table-wrapper {
-    overflow-x: auto;
-    border-radius: 1rem;
-  }
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-  .admin-table th,
-  .admin-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-admin-border);
-  }
-  .admin-table th {
-    font-weight: 600;
-    color: var(--color-admin-table-header);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-  }
-  .admin-empty td {
-    text-align: center;
-    color: var(--color-muted);
-  }
-  .admin-table tbody tr:hover {
-    background: var(--color-admin-row-hover);
-  }
   :global(.admin-patient-meta) {
-    margin-top: 0.35rem;
-    display: grid;
-    gap: 0.25rem;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
   :global(.admin-empty td) {
     text-align: center;
     color: var(--color-muted);
   }
   :global(.admin-status) {
     display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
+  
+  :global(.records-row--appointment) {
+    background: rgba(241, 245, 249, 0.9);
+  }
+
+  :global(.records-row:hover) {
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  :global(.records-status) {
+    background: rgba(148, 163, 184, 0.16);
+    color: #475569;
+  }
+  :global(.admin-status--confirmed) {
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -117,22 +95,23 @@ import appointmentsClient from './appointments.client.js?url';
     background: rgba(148, 163, 184, 0.16);
     color: #475569;
   }
-  :global(.admin-status--confirmed) {
+
+  :global(.records-status--confirmed) {
     background: rgba(37, 99, 235, 0.12);
     color: #1d4ed8;
   }
-  :global(.admin-status--pending) {
+
+  :global(.records-status--pending) {
     background: rgba(234, 179, 8, 0.18);
     color: #b45309;
   }
-  :global(.admin-status--cancelled) {
+
+  :global(.records-status--cancelled) {
     background: rgba(220, 38, 38, 0.18);
     color: #b91c1c;
   }
-  :global(.admin-status--completed) {
+
+  :global(.records-status--completed) {
     background: rgba(14, 159, 110, 0.16);
     color: #047857;
   }
-</style>
-
-<script type="module" src={appointmentsClient}></script>

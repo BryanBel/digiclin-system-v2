@@ -9,18 +9,46 @@ import jwt from 'jsonwebtoken';
 import usersRepository from '../users/users.repository.js';
 import { ErrorWithStatus } from '../../utils/errorTypes.js';
 import { authenticateUser } from './auth.middlewares.js';
-import resend from '../../services/resend.js';
+import { sendEmail } from '../../services/emailDispatcher.js';
 import {
   assignUserToAppointmentRequests,
   ensurePatientAndLinkRequestsForEmail,
 } from '../appointment_requests/appointment_requests.repository.js';
 const authRouter = express.Router();
 
+const ROLE_DISPLAY_LABEL = {
+  doctor: 'Doctor',
+  patient: 'Paciente',
+  admin: 'Admin',
+};
+
+const formatRecipient = ({ email, fullName, role }) => {
+  if (!email) return '';
+  const label = ROLE_DISPLAY_LABEL[role] ?? ROLE_DISPLAY_LABEL.doctor;
+  const hasName = typeof fullName === 'string' && fullName.trim().length > 0;
+  const displayName = hasName ? `${label} ${fullName.trim()}` : label;
+  return `${displayName} <${email}>`;
+};
+
 authRouter.post('/register', async (req, res) => {
-  const { email, password, fullName, role } = registerUserRouteSchema.body.parse(req.body);
+  const parsedPayload = registerUserRouteSchema.body.parse(req.body);
+  const { email, password, fullName, role, patientProfile } = parsedPayload;
 
   const normalizedFullName = fullName?.trim() || null;
   const normalizedRole = role ?? 'doctor';
+  const normalizedPatientProfile =
+    normalizedRole === 'patient'
+      ? {
+          phone: patientProfile?.phone?.trim() || null,
+          documentId: patientProfile?.documentId?.trim() || null,
+          birthDate: patientProfile?.birthDate ?? null,
+          gender: patientProfile?.gender ?? null,
+          age:
+            typeof patientProfile?.age === 'number' && Number.isFinite(patientProfile.age)
+              ? patientProfile.age
+              : null,
+        }
+      : null;
 
   const userExists = await usersRepository.findByEmail({ email });
   if (userExists) throw new ErrorWithStatus(400, 'User already exists');
@@ -39,6 +67,11 @@ authRouter.post('/register', async (req, res) => {
       await ensurePatientAndLinkRequestsForEmail({
         email,
         fullName: normalizedFullName,
+        phone: normalizedPatientProfile?.phone ?? undefined,
+        documentId: normalizedPatientProfile?.documentId ?? undefined,
+        birthDate: normalizedPatientProfile?.birthDate ?? undefined,
+        gender: normalizedPatientProfile?.gender ?? undefined,
+        age: normalizedPatientProfile?.age ?? undefined,
       });
     }
   } catch (linkError) {
@@ -59,15 +92,26 @@ authRouter.post('/register', async (req, res) => {
   const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
 
   try {
-    const toEmail = normalizedFullName ? `${normalizedFullName} <${email}>` : email;
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+    const toEmail = formatRecipient({
+      email,
+      fullName: normalizedFullName,
+      role: normalizedRole,
+    });
+    const textContent = [
+      'Gracias por registrarte. Por favor, verifica tu correo electrónico en el siguiente enlace:',
+      verificationUrl,
+    ].join('\n');
+
+    const htmlContent = `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`;
+
+    const { provider } = await sendEmail({
       to: toEmail,
       subject: 'Verifica tu correo',
-      html: `<p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para verificar tu correo electrónico:</p><a href="${verificationUrl}">Verificar correo</a>`,
+      text: textContent,
+      html: htmlContent,
     });
 
-    console.log(`Verification email sent successfully to ${email}`);
+    console.log(`Verification email sent successfully to ${email} via ${provider}`);
     res.status(201).json({
       message: 'Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.',
     });

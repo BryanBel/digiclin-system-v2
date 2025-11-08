@@ -1,0 +1,144 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import appointmentsClient from './appointments.client.js?url';
+
+const locals = Astro.locals as { user?: { role?: string } };
+const user = locals.user ?? null;
+
+if (!user) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="DigiClin | Mis citas">
+  <section class="patient-shell">
+    <header class="patient-header">
+      <h1>Mis citas</h1>
+      <p class="patient-subtitle">
+        Consulta tus próximas visitas y revisa el historial de citas confirmadas.
+      </p>
+      <div class="patient-filters" role="group" aria-label="Filtrar citas">
+        <button
+          type="button"
+          class="patient-filter patient-filter--active"
+          data-appointments-filter="upcoming"
+        >
+          Próximas
+        </button>
+        <button
+          type="button"
+          class="patient-filter"
+          data-appointments-filter="all"
+        >
+          Todas
+        </button>
+      </div>
+    </header>
+
+    <div class="patient-card">
+      <div class="records-table-wrapper">
+        <table class="records-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Profesional</th>
+              <th>Motivo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody data-patient-appointments>
+            <tr class="records-empty">
+              <td colspan="4">Cargando citas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .patient-shell {
+    width: 100%;
+    max-width: 70rem;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+    padding: clamp(2rem, 5vw, 3rem);
+    background: var(--hero-bg);
+    border-radius: 28px;
+    box-shadow: var(--hero-card-shadow);
+  }
+
+  .patient-header {
+    display: grid;
+    gap: 0.65rem;
+    text-align: center;
+  }
+
+  .patient-header h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.4rem);
+  }
+
+  .patient-subtitle {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .patient-filters {
+    display: inline-flex;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    padding: 0.4rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.16);
+  }
+
+  .patient-filter {
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-weight: 600;
+    padding: 0.4rem 1.1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .patient-filter--active {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 14px 26px -18px rgba(37, 99, 235, 0.55);
+  }
+
+  .patient-filter:not(.patient-filter--active):hover {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+
+  .patient-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 1.25rem;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-shadow: 0 18px 32px -24px rgba(15, 23, 42, 0.55);
+  }
+
+  .patient-card .records-table {
+    background: transparent;
+  }
+
+  .patient-card .records-row--appointment {
+    background: rgba(241, 245, 249, 0.95);
+  }
+
+  .patient-card .records-row--request {
+    background: rgba(219, 234, 254, 0.92);
+  }
+</style>
+
+<script type="module" src={appointmentsClient}></script>

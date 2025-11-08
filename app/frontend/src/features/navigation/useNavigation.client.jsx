@@ -9,15 +9,27 @@ export default function useNavigationClient() {
     const loginLink = nav.querySelector('[data-nav-link="login"]');
     const signupLink = nav.querySelector('[data-nav-link="signup"]');
     const appointmentsLink = nav.querySelector('[data-nav-link="appointments"]');
-  const adminLink = nav.querySelector('[data-nav-link="admin"]');
+    const adminLink = nav.querySelector('[data-nav-link="admin"]');
     const emailTag = nav.querySelector('[data-nav-email]');
     const logoutButton = nav.querySelector('[data-action="logout"]');
-  const patientsLink = nav.querySelector('[data-nav-link="patients"]');
+    const patientsLink = nav.querySelector('[data-nav-link="patients"]');
+    const doctorLink = nav.querySelector('[data-nav-link="doctor"]');
+    const medicalHistoryLink = nav.querySelector('[data-nav-link="medical-history"]');
+    const patientAppointmentsLink = nav.querySelector('[data-nav-link="patient-appointments"]');
+    const patientHistoryLink = nav.querySelector('[data-nav-link="patient-history"]');
 
     const show = (element) => element?.removeAttribute('hidden');
     const hide = (element) => element?.setAttribute('hidden', '');
 
     const applyState = (user) => {
+      hide(adminLink);
+      hide(appointmentsLink);
+      hide(patientsLink);
+      hide(doctorLink);
+      hide(medicalHistoryLink);
+      hide(patientAppointmentsLink);
+      hide(patientHistoryLink);
+
       if (user) {
         hide(loginLink);
         hide(signupLink);
@@ -26,14 +38,19 @@ export default function useNavigationClient() {
           emailTag.textContent = user.email ?? '';
           show(emailTag);
         }
-        if (user.role === 'admin') {
+
+        const role = user.role ?? '';
+        if (role === 'admin') {
           show(adminLink);
           show(appointmentsLink);
           show(patientsLink);
-        } else {
-          hide(adminLink);
-          hide(appointmentsLink);
-          hide(patientsLink);
+          show(medicalHistoryLink);
+        } else if (role === 'doctor') {
+          show(doctorLink);
+          show(medicalHistoryLink);
+        } else if (role === 'patient') {
+          show(patientAppointmentsLink);
+          show(patientHistoryLink);
         }
       } else {
         show(loginLink);
@@ -43,9 +60,6 @@ export default function useNavigationClient() {
           emailTag.textContent = '';
           hide(emailTag);
         }
-        hide(adminLink);
-        hide(appointmentsLink);
-        hide(patientsLink);
       }
     };
 
