@@ -49,17 +49,20 @@ import appointmentsClient from './appointments.client.js?url';
     border-radius: 28px;
     box-shadow: var(--hero-card-shadow);
   }
+
   .admin-header h1 {
     margin: 0;
     font-size: 1.75rem;
     text-align: center;
   }
+
   .admin-subtitle {
     margin: 0.25rem 0 0;
     color: var(--color-muted);
     text-align: center;
     font-size: 1.05rem;
   }
+
   .admin-card {
     background: var(--color-admin-surface);
     border: 1px solid var(--color-admin-border);
@@ -67,14 +70,7 @@ import appointmentsClient from './appointments.client.js?url';
     padding: clamp(1.5rem, 3vw, 2rem);
     box-shadow: var(--shadow-card);
   }
-  :global(.admin-patient-meta) {
-  :global(.admin-empty td) {
-    text-align: center;
-    color: var(--color-muted);
-  }
-  :global(.admin-status) {
-    display: inline-flex;
-  
+
   :global(.records-row--appointment) {
     background: rgba(241, 245, 249, 0.9);
   }
@@ -84,10 +80,10 @@ import appointmentsClient from './appointments.client.js?url';
   }
 
   :global(.records-status) {
-    background: rgba(148, 163, 184, 0.16);
-    color: #475569;
-  }
-  :global(.admin-status--confirmed) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -96,16 +92,22 @@ import appointmentsClient from './appointments.client.js?url';
     color: #475569;
   }
 
-  :global(.records-status--confirmed) {
-    background: rgba(37, 99, 235, 0.12);
-    color: #1d4ed8;
-  }
-
   :global(.records-status--pending) {
     background: rgba(234, 179, 8, 0.18);
     color: #b45309;
   }
 
+  :global(.records-status--confirmed) {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+
+  :global(.records-status--reschedule) {
+    background: rgba(234, 179, 8, 0.2);
+    color: #92400e;
+  }
+
+  :global(.records-status--rejected),
   :global(.records-status--cancelled) {
     background: rgba(220, 38, 38, 0.18);
     color: #b91c1c;
@@ -115,3 +117,4 @@ import appointmentsClient from './appointments.client.js?url';
     background: rgba(14, 159, 110, 0.16);
     color: #047857;
   }
+</style>
