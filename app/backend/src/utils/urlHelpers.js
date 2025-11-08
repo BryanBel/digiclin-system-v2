@@ -18,15 +18,26 @@ const resolveFromCorsOrigin = () => {
 };
 
 export const resolveFrontendBaseUrl = () => {
+  const isProd = (process.env.NODE_ENV ?? '').toLowerCase() === 'prod';
+  const renderExternalUrl = normalizeUrl(process.env.RENDER_EXTERNAL_URL);
+  const explicitRenderUrl = normalizeUrl(process.env.RENDER_PUBLIC_URL);
+  const defaultRenderUrl = 'https://digiclin-system-v2.onrender.com';
+
   const candidates = [
     normalizeUrl(process.env.FRONTEND_BASE_URL),
     normalizeUrl(process.env.FRONTEND_URL),
     normalizeUrl(process.env.PUBLIC_FRONTEND_URL),
     resolveFromCorsOrigin(),
+    renderExternalUrl,
+    explicitRenderUrl,
   ];
 
   for (const candidate of candidates) {
     if (candidate) return candidate;
+  }
+
+  if (isProd) {
+    return defaultRenderUrl;
   }
 
   return 'http://localhost:4321';
