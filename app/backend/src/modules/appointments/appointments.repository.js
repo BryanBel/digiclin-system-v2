@@ -1,5 +1,67 @@
 import pool from '../../db/pool.js';
 
+const REQUEST_STATUS_LATERAL = `
+  LEFT JOIN LATERAL (
+    SELECT
+      ar.id AS request_id,
+      ar.public_id AS request_public_id,
+      ar.status AS request_status,
+      ar.admin_note AS request_admin_note,
+      ar.updated_at AS request_updated_at
+    FROM appointment_requests ar
+    WHERE ar.appointment_id = a.id
+    ORDER BY ar.updated_at DESC NULLS LAST, ar.id DESC
+    LIMIT 1
+  ) req ON TRUE
+`;
+
+const MEDICAL_HISTORY_SUBQUERY = `(
+        SELECT mh.id
+        FROM medical_history mh
+        LEFT JOIN visits mv ON mv.id = mh.visit_id
+        WHERE mh.patient_id = a.patient_id
+          AND (
+            (mh.visit_id IS NOT NULL AND mv.appointment_id = a.id)
+            OR (
+              mh.visit_id IS NULL
+              AND mh.entry_date IS NOT NULL
+              AND mh.entry_date::date = a.scheduled_for::date
+              AND (mh.doctor_id IS NULL OR mh.doctor_id = a.doctor_id)
+            )
+          )
+        ORDER BY mh.entry_date DESC
+        LIMIT 1
+      ) AS medical_history_id`;
+
+const BASE_SELECT_COLUMNS = `
+    a.*,
+    u.email AS doctor_email,
+    u.full_name AS doctor_name,
+    COALESCE(p.full_name, a.legacy_name) AS patient_name,
+    p.full_name AS patient_full_name,
+    p.document_id AS patient_document_id,
+    p.email AS patient_email,
+    p.phone AS patient_phone,
+    p.gender AS patient_gender,
+    p.age AS patient_age,
+    p.birth_date AS patient_birth_date,
+    v.id AS visit_id,
+    v.public_id AS visit_public_id,
+    req.request_id,
+    req.request_public_id,
+    req.request_status,
+    req.request_admin_note,
+    req.request_updated_at,
+    ${MEDICAL_HISTORY_SUBQUERY}
+  `;
+
+const BASE_JOINS = `
+  LEFT JOIN users u ON u.id = a.doctor_id
+  LEFT JOIN patients p ON p.id = a.patient_id
+  LEFT JOIN visits v ON v.appointment_id = a.id
+  ${REQUEST_STATUS_LATERAL}
+`;
+
 export async function createAppointment(
   {
     patientId,
@@ -58,38 +120,10 @@ export async function createAppointment(
 
 export async function findAppointmentById({ id }) {
   const query = `
-    SELECT a.*, u.email AS doctor_email, u.full_name AS doctor_name,
-      COALESCE(p.full_name, a.legacy_name) AS patient_name,
-      p.full_name AS patient_full_name,
-      p.document_id AS patient_document_id,
-      p.email AS patient_email,
-      p.phone AS patient_phone,
-      p.gender AS patient_gender,
-      p.age AS patient_age,
-      p.birth_date AS patient_birth_date,
-      v.id AS visit_id,
-      v.public_id AS visit_public_id,
-      (
-        SELECT mh.id
-        FROM medical_history mh
-        LEFT JOIN visits mv ON mv.id = mh.visit_id
-        WHERE mh.patient_id = a.patient_id
-          AND (
-            (mh.visit_id IS NOT NULL AND mv.appointment_id = a.id)
-            OR (
-              mh.visit_id IS NULL
-              AND mh.entry_date IS NOT NULL
-              AND mh.entry_date::date = a.scheduled_for::date
-              AND (mh.doctor_id IS NULL OR mh.doctor_id = a.doctor_id)
-            )
-          )
-        ORDER BY mh.entry_date DESC
-        LIMIT 1
-      ) AS medical_history_id
+    SELECT
+      ${BASE_SELECT_COLUMNS}
     FROM appointments a
-    LEFT JOIN users u ON u.id = a.doctor_id
-    LEFT JOIN patients p ON p.id = a.patient_id
-    LEFT JOIN visits v ON v.appointment_id = a.id
+    ${BASE_JOINS}
     WHERE a.id = $1
   `;
   const { rows } = await pool.query(query, [id]);
@@ -109,38 +143,10 @@ export async function listAppointments({ status, limit = 50, offset = 0 }) {
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
   const query = `
-    SELECT a.*, u.email AS doctor_email, u.full_name AS doctor_name,
-      COALESCE(p.full_name, a.legacy_name) AS patient_name,
-      p.full_name AS patient_full_name,
-      p.document_id AS patient_document_id,
-      p.email AS patient_email,
-      p.phone AS patient_phone,
-      p.gender AS patient_gender,
-      p.age AS patient_age,
-      p.birth_date AS patient_birth_date,
-      v.id AS visit_id,
-      v.public_id AS visit_public_id,
-      (
-        SELECT mh.id
-        FROM medical_history mh
-        LEFT JOIN visits mv ON mv.id = mh.visit_id
-        WHERE mh.patient_id = a.patient_id
-          AND (
-            (mh.visit_id IS NOT NULL AND mv.appointment_id = a.id)
-            OR (
-              mh.visit_id IS NULL
-              AND mh.entry_date IS NOT NULL
-              AND mh.entry_date::date = a.scheduled_for::date
-              AND (mh.doctor_id IS NULL OR mh.doctor_id = a.doctor_id)
-            )
-          )
-        ORDER BY mh.entry_date DESC
-        LIMIT 1
-      ) AS medical_history_id
+    SELECT
+      ${BASE_SELECT_COLUMNS}
     FROM appointments a
-    LEFT JOIN users u ON u.id = a.doctor_id
-    LEFT JOIN patients p ON p.id = a.patient_id
-    LEFT JOIN visits v ON v.appointment_id = a.id
+    ${BASE_JOINS}
     ${whereClause}
     ORDER BY a.scheduled_for DESC
     LIMIT $${index++}
@@ -180,38 +186,10 @@ export async function listAppointmentsForDoctor({
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
   const query = `
-    SELECT a.*, u.email AS doctor_email, u.full_name AS doctor_name,
-      COALESCE(p.full_name, a.legacy_name) AS patient_name,
-      p.full_name AS patient_full_name,
-      p.document_id AS patient_document_id,
-      p.email AS patient_email,
-      p.phone AS patient_phone,
-      p.gender AS patient_gender,
-      p.age AS patient_age,
-      p.birth_date AS patient_birth_date,
-      v.id AS visit_id,
-      v.public_id AS visit_public_id,
-      (
-        SELECT mh.id
-        FROM medical_history mh
-        LEFT JOIN visits mv ON mv.id = mh.visit_id
-        WHERE mh.patient_id = a.patient_id
-          AND (
-            (mh.visit_id IS NOT NULL AND mv.appointment_id = a.id)
-            OR (
-              mh.visit_id IS NULL
-              AND mh.entry_date IS NOT NULL
-              AND mh.entry_date::date = a.scheduled_for::date
-              AND (mh.doctor_id IS NULL OR mh.doctor_id = a.doctor_id)
-            )
-          )
-        ORDER BY mh.entry_date DESC
-        LIMIT 1
-      ) AS medical_history_id
+    SELECT
+      ${BASE_SELECT_COLUMNS}
     FROM appointments a
-    LEFT JOIN users u ON u.id = a.doctor_id
-    LEFT JOIN patients p ON p.id = a.patient_id
-    LEFT JOIN visits v ON v.appointment_id = a.id
+    ${BASE_JOINS}
     ${whereClause}
     ORDER BY a.scheduled_for ASC
     LIMIT $${index}
@@ -264,38 +242,10 @@ export async function listAppointmentsForPatient({
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
   const query = `
-    SELECT a.*, u.email AS doctor_email, u.full_name AS doctor_name,
-      COALESCE(p.full_name, a.legacy_name) AS patient_name,
-      p.full_name AS patient_full_name,
-      p.document_id AS patient_document_id,
-      p.email AS patient_email,
-      p.phone AS patient_phone,
-      p.gender AS patient_gender,
-      p.age AS patient_age,
-      p.birth_date AS patient_birth_date,
-      v.id AS visit_id,
-      v.public_id AS visit_public_id,
-      (
-        SELECT mh.id
-        FROM medical_history mh
-        LEFT JOIN visits mv ON mv.id = mh.visit_id
-        WHERE mh.patient_id = a.patient_id
-          AND (
-            (mh.visit_id IS NOT NULL AND mv.appointment_id = a.id)
-            OR (
-              mh.visit_id IS NULL
-              AND mh.entry_date IS NOT NULL
-              AND mh.entry_date::date = a.scheduled_for::date
-              AND (mh.doctor_id IS NULL OR mh.doctor_id = a.doctor_id)
-            )
-          )
-        ORDER BY mh.entry_date DESC
-        LIMIT 1
-      ) AS medical_history_id
+    SELECT
+      ${BASE_SELECT_COLUMNS}
     FROM appointments a
-    LEFT JOIN users u ON u.id = a.doctor_id
-    LEFT JOIN patients p ON p.id = a.patient_id
-    LEFT JOIN visits v ON v.appointment_id = a.id
+    ${BASE_JOINS}
     ${whereClause}
     ORDER BY a.scheduled_for ASC
     LIMIT $${index}

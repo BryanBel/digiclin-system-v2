@@ -13,7 +13,6 @@ const STATUS_LABELS = {
 
 const state = {
   appointments: [],
-  requestByAppointmentId: new Map(),
 };
 
 const escapeHtml = (value) => {
@@ -50,11 +49,11 @@ const parseDateSafe = (value) => {
 };
 
 const deriveAppointmentStatus = (appointment) => {
-  const linkedRequest = state.requestByAppointmentId.get(Number(appointment.id)) ?? null;
-  const requestStatus = linkedRequest?.status ?? null;
+  const requestStatus = appointment.request_status ?? null;
   const baseStatus = appointment.status ?? 'pending';
+  const scheduledAt = parseDateSafe(appointment.scheduled_for);
 
-  if (requestStatus === 'rejected' || baseStatus === 'cancelled') {
+  if (requestStatus === 'rejected') {
     return 'rejected';
   }
 
@@ -62,19 +61,25 @@ const deriveAppointmentStatus = (appointment) => {
     return 'reschedule';
   }
 
-  if (baseStatus === 'completed') {
-    return 'completed';
-  }
-
-  if (requestStatus === 'confirmed' || baseStatus === 'confirmed') {
-    const scheduledAt = parseDateSafe(appointment.scheduled_for);
+  if (requestStatus === 'confirmed') {
     if (scheduledAt && scheduledAt.getTime() <= Date.now()) {
       return 'completed';
     }
     return 'confirmed';
   }
 
-  const scheduledAt = parseDateSafe(appointment.scheduled_for);
+  if (requestStatus === 'completed') {
+    return 'completed';
+  }
+
+  if (baseStatus === 'cancelled') {
+    return 'rejected';
+  }
+
+  if (baseStatus === 'completed') {
+    return 'completed';
+  }
+
   if (scheduledAt && scheduledAt.getTime() <= Date.now()) {
     return 'completed';
   }
@@ -186,34 +191,6 @@ const loadAppointments = async () => {
 
     const appointments = Array.isArray(data.appointments) ? data.appointments : [];
     state.appointments = appointments;
-
-    try {
-      const requestsResponse = await fetch(
-        `${BACK_ENDPOINT}/api/appointment-requests?limit=250`,
-        {
-          credentials: 'include',
-        },
-      );
-
-      if (requestsResponse.ok) {
-        const requestsData = await requestsResponse.json();
-        const requestList = Array.isArray(requestsData.requests) ? requestsData.requests : [];
-        state.requestByAppointmentId = requestList.reduce((acc, request) => {
-          if (request?.appointment_id) {
-            const appointmentId = Number(request.appointment_id);
-            if (!acc.has(appointmentId)) {
-              acc.set(appointmentId, request);
-            }
-          }
-          return acc;
-        }, new Map());
-      } else {
-        state.requestByAppointmentId = new Map();
-      }
-    } catch (error) {
-      console.warn('No se pudieron cargar las solicitudes vinculadas a las citas:', error);
-      state.requestByAppointmentId = new Map();
-    }
 
     renderTable(state.appointments);
   } catch (error) {
