@@ -1,12 +1,12 @@
 import crypto from 'crypto';
 import pool from '../../db/pool.js';
 import { createAppointment } from '../appointments/appointments.repository.js';
-import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
 import {
   ensurePatientFromRequest,
   ensurePatientForUserRegistration,
 } from '../patients/patients.repository.js';
 import { calculateAge, parseDateInput } from '../../utils/dateHelpers.js';
+import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js';
 
 export const createAppointmentRequest = async ({
   fullName,
@@ -287,6 +287,130 @@ export const assignUserToAppointmentRequests = async ({ email, userId }) => {
   return rows;
 };
 
+const linkPatientToAppointmentRequests = async ({ email, patientId }) => {
+  const query = `
+    UPDATE appointment_requests
+    SET patient_id = $2,
+        updated_at = NOW()
+    WHERE LOWER(email) = LOWER($1)
+      AND (patient_id IS NULL OR patient_id <> $2)
+    RETURNING *
+  `;
+
+  await pool.query(query, [email, patientId]);
+};
+
+const mapAppointmentStatusToRequestStatus = (status) => {
+  switch (status) {
+    case 'cancelled':
+      return APPOINTMENT_REQUEST_STATUS.REJECTED;
+    case 'pending':
+      return APPOINTMENT_REQUEST_STATUS.PENDING;
+    case 'confirmed':
+    case 'completed':
+    default:
+      return APPOINTMENT_REQUEST_STATUS.CONFIRMED;
+  }
+};
+
+const backfillRequestsForPatientAppointments = async ({ patientId, email }) => {
+  if (!patientId) {
+    return [];
+  }
+
+  const { rows } = await pool.query(
+    `
+      SELECT
+        a.id,
+        a.reason,
+        a.scheduled_for,
+        a.status,
+        a.created_at,
+        a.updated_at,
+        a.legacy_name,
+        a.legacy_phone,
+        p.full_name,
+        p.email,
+        p.phone,
+        p.document_id,
+        p.birth_date,
+        p.gender,
+        p.age
+      FROM appointments a
+      LEFT JOIN appointment_requests ar ON ar.appointment_id = a.id
+      LEFT JOIN patients p ON p.id = a.patient_id
+      WHERE a.patient_id = $1
+        AND ar.id IS NULL
+    `,
+    [patientId],
+  );
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const inserted = [];
+
+  for (const appointment of rows) {
+    const status = mapAppointmentStatusToRequestStatus(appointment.status);
+    const fullName = appointment.full_name ?? appointment.legacy_name ?? null;
+    const contactEmail = appointment.email ?? email ?? null;
+    const phone = appointment.phone ?? appointment.legacy_phone ?? null;
+
+    const insertQuery = `
+      INSERT INTO appointment_requests (
+        full_name,
+        email,
+        phone,
+        document_id,
+        birth_date,
+        gender,
+        age,
+        symptoms,
+        preferred_date,
+        preferred_time_range,
+        is_existing_patient,
+        status,
+        admin_note,
+        appointment_id,
+        patient_id,
+        created_at,
+        updated_at
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULL,true,$10,$11,$12,$13,$14,$15)
+      ON CONFLICT DO NOTHING
+      RETURNING *
+    `;
+
+    const adminNote = 'Generada automáticamente al vincular la cita con el paciente registrado.';
+
+    const values = [
+      fullName,
+      contactEmail,
+      phone,
+      appointment.document_id ?? null,
+      appointment.birth_date ?? null,
+      appointment.gender ?? null,
+      appointment.age ?? null,
+      appointment.reason ?? null,
+      appointment.scheduled_for ?? null,
+      status,
+      adminNote,
+      appointment.id,
+      patientId,
+      appointment.created_at ?? new Date(),
+      appointment.updated_at ?? new Date(),
+    ];
+
+    const { rows: insertedRows } = await pool.query(insertQuery, values);
+    if (insertedRows.length) {
+      inserted.push(insertedRows[0]);
+    }
+  }
+
+  return inserted;
+};
+
 export const ensurePatientAndLinkRequestsForEmail = async ({
   email,
   fullName,
@@ -310,22 +434,10 @@ export const ensurePatientAndLinkRequestsForEmail = async ({
 
   if (patient) {
     await linkPatientToAppointmentRequests({ email, patientId: patient.id });
+    await backfillRequestsForPatientAppointments({ patientId: patient.id, email });
   }
 
   return patient;
-};
-
-const linkPatientToAppointmentRequests = async ({ email, patientId }) => {
-  const query = `
-    UPDATE appointment_requests
-    SET patient_id = $2,
-        updated_at = NOW()
-    WHERE LOWER(email) = LOWER($1)
-      AND (patient_id IS NULL OR patient_id <> $2)
-    RETURNING *
-  `;
-
-  await pool.query(query, [email, patientId]);
 };
 
 const isTokenExpired = (expiresAt) => {
