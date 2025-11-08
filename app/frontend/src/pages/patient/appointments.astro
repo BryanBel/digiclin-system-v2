@@ -139,6 +139,62 @@ if (!user) {
   .patient-card .records-row--request {
     background: rgba(219, 234, 254, 0.92);
   }
+
+  :global(.dark) .patient-shell {
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 55%),
+      var(--color-page-bg);
+    box-shadow: 0 26px 64px -36px rgba(3, 6, 15, 0.85);
+  }
+
+  :global(.dark) .patient-header h1 {
+    color: var(--color-body-text);
+  }
+
+  :global(.dark) .patient-subtitle {
+    color: #cbd5f5;
+  }
+
+  :global(.dark) .patient-filters {
+    background: rgba(129, 140, 248, 0.18);
+  }
+
+  :global(.dark) .patient-filter {
+    color: #bec8f5;
+  }
+
+  :global(.dark) .patient-filter--active {
+    background: linear-gradient(135deg, #6366f1, #2563eb);
+    box-shadow: 0 16px 34px -24px rgba(59, 130, 246, 0.6);
+  }
+
+  :global(.dark) .patient-filter:not(.patient-filter--active):hover {
+    background: rgba(99, 102, 241, 0.18);
+    color: #dbeafe;
+  }
+
+  :global(.dark) .patient-card {
+    background: rgba(21, 31, 50, 0.92);
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    box-shadow: 0 28px 60px -36px rgba(2, 6, 23, 0.9);
+  }
+
+  :global(.dark) .patient-card .records-table thead th {
+    color: #d6e1ff;
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom-color: rgba(59, 130, 246, 0.28);
+  }
+
+  :global(.dark) .patient-card .records-table tbody td {
+    color: #f8fbff;
+  }
+
+  :global(.dark) .patient-card .records-row--appointment {
+    background: rgba(30, 41, 59, 0.88);
+  }
+
+  :global(.dark) .patient-card .records-row--request {
+    background: rgba(59, 130, 246, 0.18);
+  }
 </style>
 
 <script type="module" src={appointmentsClient}></script>
