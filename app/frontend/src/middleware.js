@@ -1,8 +1,25 @@
 import { defineMiddleware } from 'astro/middleware';
 
-const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3000';
+const normalizeUrl = (value = '') => value.replace(/\/$/, '');
+
+const resolveBackendUrl = (context) => {
+  const envBackend =
+    process.env.BACKEND_URL ?? process.env.PUBLIC_BACKEND_URL ?? process.env.PUBLIC_BACKEND ?? '';
+
+  if (envBackend && envBackend.trim().length > 0) {
+    return normalizeUrl(envBackend.trim());
+  }
+
+  try {
+    const requestUrl = new URL(context.request.url);
+    return `${requestUrl.protocol}//${requestUrl.host}`;
+  } catch {
+    return 'http://localhost:3000';
+  }
+};
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const backendUrl = resolveBackendUrl(context);
   const cookieHeader = context.request.headers.get('cookie');
   context.locals.patientProfile = null;
 
