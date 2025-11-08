@@ -10,8 +10,21 @@ const resolveBackendUrl = (context) => {
     return normalizeUrl(envBackend.trim());
   }
 
+  const isDev =
+    (typeof import.meta !== 'undefined' && import.meta.env?.DEV === true) ||
+    process.env.NODE_ENV === 'dev';
+
+  if (isDev) {
+    return 'http://localhost:3000';
+  }
+
   try {
     const requestUrl = new URL(context.request.url);
+
+    if (requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1') {
+      return `${requestUrl.protocol}//${requestUrl.hostname}:3000`;
+    }
+
     return `${requestUrl.protocol}//${requestUrl.host}`;
   } catch {
     return 'http://localhost:3000';
