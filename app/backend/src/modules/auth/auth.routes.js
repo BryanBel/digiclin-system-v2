@@ -14,6 +14,7 @@ import {
   assignUserToAppointmentRequests,
   ensurePatientAndLinkRequestsForEmail,
 } from '../appointment_requests/appointment_requests.repository.js';
+import { buildBackendUrl, buildFrontendUrl } from '../../utils/urlHelpers.js';
 const authRouter = express.Router();
 
 const ROLE_DISPLAY_LABEL = {
@@ -88,8 +89,7 @@ authRouter.post('/register', async (req, res) => {
     { expiresIn: '1h' },
   );
 
-  const backendUrl = process.env.BACKEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000';
-  const verificationUrl = `${backendUrl}/api/auth/verify-email/${verificationToken}`;
+  const verificationUrl = buildBackendUrl(`/api/auth/verify-email/${verificationToken}`);
 
   try {
     const toEmail = formatRecipient({
@@ -123,14 +123,13 @@ authRouter.post('/register', async (req, res) => {
 
 authRouter.get('/verify-email/:token', async (req, res) => {
   const { token } = verifyEmailRouteSchema.params.parse(req.params);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4321';
 
   try {
     const decodedToken = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
     await usersRepository.verifyOne({ id: decodedToken.id });
-    res.redirect(`${frontendUrl}/login`);
+    res.redirect(buildFrontendUrl('/login'));
   } catch {
-    res.redirect(`${frontendUrl}/email-verification-failed`);
+    res.redirect(buildFrontendUrl('/email-verification-failed'));
   }
 });
 
