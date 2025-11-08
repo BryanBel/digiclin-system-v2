@@ -29,15 +29,59 @@ const ACTIONS = {
   REJECT: 'rejected',
 };
 
+const TIME_RANGE_LABELS = {
+  morning: 'Mañana',
+  afternoon: 'Tarde',
+  evening: 'Noche',
+  night: 'Noche',
+  anytime: 'Todo el día',
+  day: 'Mañana',
+};
+
+const STATUS_LABELS = {
+  pending: 'Pendiente',
+  confirmed: 'Confirmada',
+  reschedule: 'Reprogramada',
+  rejected: 'Rechazada',
+  completed: 'Realizada',
+};
+
+const BUTTON_VARIANTS = {
+  confirmed: { label: 'Confirmada', className: 'admin-button--success' },
+  completed: { label: 'Realizada', className: 'admin-button--success' },
+  reschedule: { label: 'Reprogramada', className: 'admin-button--warning' },
+  rejected: { label: 'Rechazada', className: 'admin-button--danger' },
+};
+
+const appointmentCache = new Map();
+
+const escapeSelector = (value) => {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return String(value).replace(/[[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 const state = {
   requests: [],
   activeRequest: null,
   activeAction: null,
+  highlightRequestPublicId: new URLSearchParams(window.location.search).get('request'),
 };
 
 const GENDER_LABELS = {
   male: 'Masculino',
   female: 'Femenino',
+};
+
+const escapeHtml = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 const formatDate = (value) => {
@@ -70,74 +114,219 @@ const formatDateOnly = (value) => {
   }
 };
 
+const parseDateSafe = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const getPreferredInfo = (request) => {
+  const preferredDateLabel = formatDate(request.preferred_date);
+  const timeRange = request.preferred_time_range
+    ? TIME_RANGE_LABELS[request.preferred_time_range] ?? request.preferred_time_range
+    : '';
+  return [preferredDateLabel, timeRange ? `Franja: ${timeRange}` : ''].filter(Boolean).join(' · ');
+};
+
+const fetchAppointmentDetails = async (appointmentId) => {
+  if (!appointmentId) return null;
+  const numericId = Number(appointmentId);
+  const cacheKey = Number.isNaN(numericId) ? appointmentId : numericId;
+  if (appointmentCache.has(cacheKey)) {
+    return appointmentCache.get(cacheKey);
+  }
+
+  try {
+    const response = await fetch(`${BACK_ENDPOINT}/api/appointments/${appointmentId}`, {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      appointmentCache.set(cacheKey, null);
+      return null;
+    }
+    const data = await response.json();
+    const appointment = data?.appointment ?? null;
+    appointmentCache.set(cacheKey, appointment);
+    return appointment;
+  } catch (error) {
+    console.error('No se pudo obtener la cita vinculada:', error);
+    appointmentCache.set(cacheKey, null);
+    return null;
+  }
+};
+
+const deriveRequestStatus = (request) => {
+  const appointment = request.__appointment ?? null;
+  const appointmentStatus = appointment?.status;
+  if (appointmentStatus === 'cancelled') return 'rejected';
+  if (appointmentStatus === 'completed') return 'completed';
+
+  const baseStatus = request.status ?? 'pending';
+  if (baseStatus === 'rejected') return 'rejected';
+
+  const scheduledAt = parseDateSafe(appointment?.scheduled_for ?? request.scheduled_for);
+  if (scheduledAt && scheduledAt.getTime() <= Date.now()) {
+    return 'completed';
+  }
+
+  if (baseStatus === 'reschedule') return 'reschedule';
+  if (baseStatus === 'confirmed') return 'confirmed';
+  return baseStatus;
+};
+
+const buildConfirmButton = (request, derivedStatus) => {
+  if (derivedStatus === 'pending') {
+    return `
+      <button
+        type="button"
+        class="admin-button admin-button--primary"
+        data-open-confirm="${request.id}"
+      >
+        Confirmar
+      </button>
+    `;
+  }
+
+  const config = BUTTON_VARIANTS[derivedStatus];
+  if (!config) {
+    return `
+      <button type="button" class="admin-button admin-button--primary" disabled>
+        ${escapeHtml(STATUS_LABELS[derivedStatus] ?? 'No disponible')}
+      </button>
+    `;
+  }
+
+  return `
+    <button type="button" class="admin-button ${config.className}" disabled>
+      ${escapeHtml(config.label)}
+    </button>
+  `;
+};
+
+const buildRescheduleButton = (request, derivedStatus) => {
+  if (derivedStatus === 'rejected' || derivedStatus === 'completed') {
+    const label = derivedStatus === 'completed' ? 'No editable' : 'Rechazada';
+    return `
+      <button type="button" class="admin-button admin-button--secondary" disabled>${label}</button>
+    `;
+  }
+
+  const isAlreadyRescheduled = derivedStatus === 'reschedule';
+  const label = isAlreadyRescheduled ? 'Reprogramada' : 'Reprogramar';
+  const attrs = isAlreadyRescheduled
+    ? 'disabled'
+    : `data-open-reschedule="${request.id}"`;
+
+  return `
+    <button type="button" class="admin-button admin-button--secondary" ${attrs}>
+      ${label}
+    </button>
+  `;
+};
+
+const buildRejectButton = (request, derivedStatus) => {
+  const isDisabled = derivedStatus === 'rejected' || derivedStatus === 'completed';
+  const attrs = isDisabled ? 'disabled' : `data-open-reject="${request.id}"`;
+  const label = isDisabled ? (derivedStatus === 'completed' ? 'No disponible' : 'Rechazada') : 'Rechazar';
+  return `
+    <button type="button" class="admin-button admin-button--danger" ${attrs}>
+      ${label}
+    </button>
+  `;
+};
+
+const highlightFocusedRequest = () => {
+  if (!state.highlightRequestPublicId) return;
+  const row = tableBody.querySelector(
+    `[data-request-public-id="${escapeSelector(state.highlightRequestPublicId)}"]`,
+  );
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  state.highlightRequestPublicId = null;
+};
+
 const renderTable = () => {
   if (!state.requests.length) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
+      <tr class="records-empty">
         <td colspan="6">No hay solicitudes registradas.</td>
       </tr>
     `;
     return;
   }
 
+  const highlightId = state.highlightRequestPublicId;
+
   tableBody.innerHTML = state.requests
     .map((request) => {
-      const preferredInfo = [
-        formatDate(request.preferred_date),
-        request.preferred_time_range ? `Franja: ${request.preferred_time_range}` : '',
-      ]
-        .filter(Boolean)
-        .join(' · ');
-
-      const statusClass = `admin-status admin-status--${request.status}`;
+      const derivedStatus = deriveRequestStatus(request);
+      const statusClass = `records-status records-status--${derivedStatus}`;
+      const statusLabel = STATUS_LABELS[derivedStatus] ?? request.status ?? '-';
+      const preferredInfo = getPreferredInfo(request);
+      const confirmButton = buildConfirmButton(request, derivedStatus);
+      const rescheduleButton = buildRescheduleButton(request, derivedStatus);
+      const rejectButton = buildRejectButton(request, derivedStatus);
+      const genderLabel = request.gender
+        ? GENDER_LABELS[request.gender] ?? request.gender
+        : null;
+      const isHighlighted = Boolean(
+        highlightId && request.public_id && request.public_id === highlightId,
+      );
+      const rowClasses = ['records-row', 'records-row--request'];
+      if (isHighlighted) rowClasses.push('records-row--request-highlight');
 
       return `
-        <tr data-request-row="${request.id}">
+        <tr
+          class="${rowClasses.join(' ')}"
+          data-request-row="${request.id}"
+          ${request.public_id ? `data-request-public-id="${escapeHtml(request.public_id)}"` : ''}
+        >
           <td>
-            <strong>${request.full_name}</strong>
-            <div class="admin-patient-meta">
-              ${request.document_id ? `<span>Documento: ${request.document_id}</span>` : ''}
-              ${request.age ? `<span>Edad: ${request.age} años</span>` : ''}
-              ${request.gender ? `<span>Género: ${GENDER_LABELS[request.gender] ?? request.gender}</span>` : ''}
-              ${request.birth_date ? `<span>Nacimiento: ${formatDateOnly(request.birth_date)}</span>` : ''}
+            <div class="records-entry">
+              <div class="records-entry-header">
+                <span class="records-entry-date">${escapeHtml(request.full_name)}</span>
+              </div>
+              ${request.document_id ? `<span class="records-entry-line records-entry-line--muted">Documento: ${escapeHtml(request.document_id)}</span>` : ''}
+              ${request.age ? `<span class="records-entry-line records-entry-line--muted">Edad: ${escapeHtml(request.age)} años</span>` : ''}
+              ${genderLabel ? `<span class="records-entry-line records-entry-line--muted">Género: ${escapeHtml(genderLabel)}</span>` : ''}
+              ${request.birth_date ? `<span class="records-entry-line records-entry-line--muted">Nacimiento: ${escapeHtml(formatDateOnly(request.birth_date))}</span>` : ''}
             </div>
           </td>
           <td>
-            <div>${request.email}</div>
-            <div>${request.phone ?? 'Sin teléfono'}</div>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(request.email)}</span>
+              <span class="records-entry-line records-entry-line--muted">${escapeHtml(request.phone ?? 'Sin teléfono')}</span>
+            </div>
           </td>
-          <td>${request.symptoms ?? 'Sin descripción'}</td>
-          <td>${preferredInfo || 'Sin preferencia'}</td>
-          <td><span class="${statusClass}">${request.status}</span></td>
+          <td>
+            <div class="records-entry">
+              <span class="records-pill records-pill--muted">${escapeHtml(request.symptoms ?? 'Sin descripción')}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry">
+              <span class="records-entry-line">${escapeHtml(preferredInfo || 'Sin preferencia')}</span>
+            </div>
+          </td>
+          <td>
+            <div class="records-entry records-entry--status">
+              <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+            </div>
+          </td>
           <td>
             <div class="admin-row__actions">
-              <button
-                class="admin-button admin-button--primary"
-                data-open-confirm="${request.id}"
-                ${request.status !== 'pending' ? 'disabled' : ''}
-              >
-                Confirmar
-              </button>
-              <button
-                class="admin-button admin-button--secondary"
-                data-open-reschedule="${request.id}"
-                ${request.status === 'rejected' ? 'disabled' : ''}
-              >
-                Reprogramar
-              </button>
-              <button
-                class="admin-button admin-button--danger"
-                data-open-reject="${request.id}"
-                ${request.status === 'rejected' ? 'disabled' : ''}
-              >
-                Rechazar
-              </button>
+              ${confirmButton}
+              ${rescheduleButton}
+              ${rejectButton}
             </div>
           </td>
         </tr>
       `;
     })
     .join('');
+
+  highlightFocusedRequest();
 };
 
 const toggleFieldsForAction = (action) => {
@@ -239,7 +428,7 @@ const attachRowListeners = () => {
 
 const loadRequests = async () => {
   tableBody.innerHTML = `
-    <tr class="admin-empty">
+    <tr class="records-empty">
       <td colspan="6">Cargando solicitudes...</td>
     </tr>
   `;
@@ -254,13 +443,23 @@ const loadRequests = async () => {
       throw new Error(data?.error ?? 'No se pudieron cargar las solicitudes');
     }
 
-    state.requests = Array.isArray(data.requests) ? data.requests : [];
+    const rawRequests = Array.isArray(data.requests) ? data.requests : [];
+    const enrichedRequests = await Promise.all(
+      rawRequests.map(async (request) => {
+        const appointment = request.appointment_id
+          ? await fetchAppointmentDetails(request.appointment_id)
+          : null;
+        return { ...request, __appointment: appointment };
+      }),
+    );
+
+    state.requests = enrichedRequests;
     renderTable();
     attachRowListeners();
   } catch (error) {
     tableBody.innerHTML = `
-      <tr class="admin-empty">
-        <td colspan="6">${error.message}</td>
+      <tr class="records-empty records-empty--error">
+        <td colspan="6">${escapeHtml(error.message)}</td>
       </tr>
     `;
     console.error('Error cargando solicitudes:', error);

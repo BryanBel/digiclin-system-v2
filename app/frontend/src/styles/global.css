@@ -44,6 +44,40 @@
   --color-admin-border: rgba(15, 23, 42, 0.08);
   --color-admin-row-hover: rgba(37, 99, 235, 0.06);
   --color-admin-table-header: #334155;
+  --records-header-bg: rgba(248, 250, 252, 0.9);
+  --records-header-text: #1f2937;
+  --records-row-border: rgba(148, 163, 184, 0.32);
+  --records-row-bg: rgba(248, 250, 252, 0.75);
+  --records-row-appointment-bg: rgba(241, 245, 249, 0.92);
+  --records-row-request-bg: rgba(219, 234, 254, 0.85);
+  --records-row-history-bg: rgba(240, 249, 255, 0.8);
+  --records-row-hover-bg: rgba(59, 130, 246, 0.12);
+  --records-row-shadow: 0 12px 24px -18px rgba(37, 99, 235, 0.4);
+  --records-text-strong: #1f2937;
+  --records-text-muted: #64748b;
+  --records-icon-color: #1e3a8a;
+  --records-accent: #1d4ed8;
+  --records-pill-bg: rgba(59, 130, 246, 0.12);
+  --records-pill-border: rgba(59, 130, 246, 0.2);
+  --records-pill-text: #1f2937;
+  --records-pill-request-bg: rgba(59, 130, 246, 0.18);
+  --records-pill-request-text: #1e3a8a;
+  --records-pill-request-border: rgba(59, 130, 246, 0.32);
+  --records-pill-muted-bg: rgba(148, 163, 184, 0.16);
+  --records-pill-muted-text: #475569;
+  --records-pill-muted-border: rgba(148, 163, 184, 0.22);
+  --records-status-bg: rgba(148, 163, 184, 0.2);
+  --records-status-text: #334155;
+  --records-status-confirmed-bg: rgba(37, 99, 235, 0.18);
+  --records-status-confirmed-text: #1d4ed8;
+  --records-status-pending-bg: rgba(234, 179, 8, 0.24);
+  --records-status-pending-text: #b45309;
+  --records-status-cancelled-bg: rgba(220, 38, 38, 0.24);
+  --records-status-cancelled-text: #b91c1c;
+  --records-status-completed-bg: rgba(14, 159, 110, 0.2);
+  --records-status-completed-text: #047857;
+  --records-empty-text: #64748b;
+  --records-empty-error-text: #b91c1c;
 }
 
 .dark {
@@ -89,6 +123,40 @@
   --color-admin-border: rgba(104, 148, 255, 0.22);
   --color-admin-row-hover: rgba(59, 130, 246, 0.16);
   --color-admin-table-header: #e2e9ff;
+  --records-header-bg: rgba(18, 27, 44, 0.92);
+  --records-header-text: #dce6ff;
+  --records-row-border: rgba(104, 148, 255, 0.25);
+  --records-row-bg: rgba(21, 31, 50, 0.78);
+  --records-row-appointment-bg: rgba(23, 34, 54, 0.85);
+  --records-row-request-bg: rgba(26, 40, 66, 0.88);
+  --records-row-history-bg: rgba(19, 38, 66, 0.82);
+  --records-row-hover-bg: rgba(104, 148, 255, 0.22);
+  --records-row-shadow: 0 22px 36px -26px rgba(9, 20, 46, 0.65);
+  --records-text-strong: #f1f6ff;
+  --records-text-muted: #9fb2d5;
+  --records-icon-color: #8cb3ff;
+  --records-accent: #8bb7ff;
+  --records-pill-bg: rgba(78, 118, 210, 0.18);
+  --records-pill-border: rgba(120, 162, 255, 0.32);
+  --records-pill-text: #e4ecff;
+  --records-pill-request-bg: rgba(98, 142, 255, 0.22);
+  --records-pill-request-text: #d6e4ff;
+  --records-pill-request-border: rgba(150, 190, 255, 0.38);
+  --records-pill-muted-bg: rgba(95, 116, 160, 0.25);
+  --records-pill-muted-text: #d0dbf6;
+  --records-pill-muted-border: rgba(120, 145, 190, 0.28);
+  --records-status-bg: rgba(93, 117, 170, 0.28);
+  --records-status-text: #dbe6ff;
+  --records-status-confirmed-bg: rgba(90, 138, 255, 0.25);
+  --records-status-confirmed-text: #dbe6ff;
+  --records-status-pending-bg: rgba(255, 189, 76, 0.24);
+  --records-status-pending-text: #fddaa4;
+  --records-status-cancelled-bg: rgba(255, 108, 108, 0.28);
+  --records-status-cancelled-text: #ffb4b4;
+  --records-status-completed-bg: rgba(56, 193, 114, 0.26);
+  --records-status-completed-text: #a9f0c7;
+  --records-empty-text: #9fb2d5;
+  --records-empty-error-text: #ff9a9a;
 }
 
 .auth-icon { width: 1.1rem; height: 1.1rem; color: inherit; }
@@ -100,7 +168,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.5rem, 4vw, 3rem);
 }
 .auth-shell {
   height: 100%;
@@ -740,4 +807,270 @@ body {
 
 .request-footer a:hover {
   text-decoration: underline;
+}
+
+/* Shared records table styling */
+.records-table-wrapper {
+  overflow-x: auto;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.records-table thead th {
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--records-header-text);
+  border-bottom: 1px solid var(--records-row-border);
+  background: var(--records-header-bg);
+}
+
+.records-table tbody td {
+  padding: 1.1rem 1rem 1.35rem;
+  border: none;
+  vertical-align: top;
+  color: var(--records-text-strong);
+}
+
+.records-row {
+  border-bottom: 1px solid var(--records-row-border);
+  background: var(--records-row-bg);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.records-row:last-child {
+  border-bottom: none;
+}
+
+.records-row:hover {
+  background: var(--records-row-hover-bg);
+  box-shadow: var(--records-row-shadow);
+  transform: translateY(-1px);
+}
+
+.records-row--appointment {
+  background: var(--records-row-appointment-bg);
+}
+
+.records-row--request {
+  background: var(--records-row-request-bg);
+}
+
+.records-row--history {
+  background: var(--records-row-history-bg);
+}
+
+.records-row--request:hover {
+  background: var(--records-row-hover-bg);
+}
+
+.records-empty td {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--records-empty-text);
+  font-weight: 600;
+}
+
+.records-empty--error td {
+  color: var(--records-empty-error-text);
+}
+
+.records-entry {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.records-entry--status {
+  justify-items: start;
+}
+
+.records-entry-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.records-entry-date {
+  font-weight: 700;
+  color: var(--records-accent);
+}
+
+.records-entry-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--records-text-strong);
+}
+
+.records-entry-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  color: var(--records-text-strong);
+  font-weight: 600;
+}
+
+.records-entry-line--muted {
+  color: var(--records-text-muted);
+  font-weight: 500;
+}
+
+.records-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--records-icon-color);
+}
+
+.records-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.records-icon--pill {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.records-icon--status {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.records-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(148, 163, 184, 0.28);
+  color: #0f172a;
+}
+
+.records-badge--appointment {
+  background: rgba(56, 189, 248, 0.3);
+  color: #0c4a6e;
+}
+
+.records-badge--pending {
+  background: rgba(234, 179, 8, 0.32);
+  color: #92400e;
+}
+
+.records-badge--completed {
+  background: rgba(34, 197, 94, 0.3);
+  color: #166534;
+}
+
+.records-badge--cancelled,
+.records-badge--rejected {
+  background: rgba(248, 113, 113, 0.32);
+  color: #991b1b;
+}
+
+.records-badge--request {
+  background: rgba(59, 130, 246, 0.32);
+  color: #1e3a8a;
+}
+
+.records-badge--reschedule {
+  background: rgba(234, 179, 8, 0.35);
+  color: #92400e;
+}
+
+.records-badge--history {
+  background: rgba(37, 99, 235, 0.22);
+  color: #1d4ed8;
+}
+
+.records-badge--patient {
+  background: rgba(59, 130, 246, 0.2);
+  color: #1d4ed8;
+}
+
+.records-badge--attachments {
+  background: rgba(148, 163, 184, 0.24);
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.records-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: var(--records-pill-bg);
+  color: var(--records-pill-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--records-pill-border);
+}
+
+.records-pill--request {
+  background: var(--records-pill-request-bg);
+  color: var(--records-pill-request-text);
+  box-shadow: inset 0 0 0 1px var(--records-pill-request-border);
+}
+
+.records-pill--muted {
+  background: var(--records-pill-muted-bg);
+  color: var(--records-pill-muted-text);
+  box-shadow: inset 0 0 0 1px var(--records-pill-muted-border);
+}
+
+.records-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: var(--records-status-bg);
+  color: var(--records-status-text);
+}
+
+.records-status--confirmed {
+  background: var(--records-status-confirmed-bg);
+  color: var(--records-status-confirmed-text);
+}
+
+.records-status--pending,
+.records-status--reschedule {
+  background: var(--records-status-pending-bg);
+  color: var(--records-status-pending-text);
+}
+
+.records-status--cancelled,
+.records-status--rejected {
+  background: var(--records-status-cancelled-bg);
+  color: var(--records-status-cancelled-text);
+}
+
+.records-status--completed {
+  background: var(--records-status-completed-bg);
+  color: var(--records-status-completed-text);
+}
+
+@media (max-width: 640px) {
+  .records-table thead th,
+  .records-table tbody td {
+    padding: 0.65rem;
+  }
 }

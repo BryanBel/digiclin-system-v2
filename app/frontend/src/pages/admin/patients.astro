@@ -22,8 +22,8 @@ import patientsClient from './patients.client.js?url';
             data-patient-search
           />
         </div>
-        <div class="admin-table-wrapper">
-          <table class="admin-table">
+        <div class="records-table-wrapper">
+          <table class="records-table records-table--patients">
             <thead>
               <tr>
                 <th>Paciente</th>
@@ -35,7 +35,7 @@ import patientsClient from './patients.client.js?url';
               </tr>
             </thead>
             <tbody data-patients-body>
-              <tr class="admin-empty">
+              <tr class="records-empty">
                 <td colspan="6">Cargando pacientes...</td>
               </tr>
             </tbody>
@@ -232,110 +232,70 @@ import patientsClient from './patients.client.js?url';
     background: var(--color-card-bg);
   }
 
-  .admin-table-wrapper {
-    overflow-x: auto;
-    border-radius: 1rem;
+  :global(.records-table--patients thead th:first-child),
+  :global(.records-table--patients tbody td:first-child) {
+    text-align: left;
   }
 
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 0.85rem 1.1rem;
+  :global(.records-table--patients thead th:nth-child(n + 2)),
+  :global(.records-table--patients tbody td:nth-child(n + 2)) {
     text-align: center;
-    border-bottom: none;
+  }
+
+  :global(.records-table--patients thead th:nth-child(3)),
+  :global(.records-table--patients tbody td:nth-child(3)) {
+    text-align: left;
+  }
+
+  :global(.records-table--patients tbody td) {
     vertical-align: top;
+  }
+
+  :global(.records-row--patient) {
     cursor: pointer;
   }
 
-  .admin-table tbody tr {
-    cursor: pointer;
+  :global(.records-row--patient td:first-child .records-entry),
+  :global(.records-row--patient td:nth-child(3) .records-entry) {
+    justify-items: flex-start;
   }
 
-  .admin-table td > strong {
-    display: block;
-    text-align: center;
-  }
-
-  .admin-table td > div {
-    text-align: center;
-  }
-
-  .admin-table tbody tr.admin-patient-row {
-    position: relative;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(37, 99, 235, 0.08));
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-  }
-
-  .admin-table tbody tr.admin-patient-row:nth-child(even) {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(37, 99, 235, 0.1));
-  }
-
-  .admin-table tbody tr.admin-patient-row::after {
-    content: '';
-    position: absolute;
-    left: 1.1rem;
-    right: 1.1rem;
-    bottom: 0;
-    height: 1px;
-    background: rgba(148, 163, 184, 0.35);
-    pointer-events: none;
-  }
-
-  .admin-table tbody tr.admin-patient-row:last-child::after {
-    display: none;
-  }
-
-  .admin-table tbody tr.admin-patient-row:hover,
-  .admin-table tbody tr.admin-patient-row:focus-within {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.24));
-    box-shadow: 0 18px 36px -18px rgba(37, 99, 235, 0.45);
-    transform: translateY(-1px);
-  }
-
-  .admin-table tbody tr.admin-patient-row:hover .admin-row-hint,
-  .admin-table tbody tr.admin-patient-row:focus-within .admin-row-hint {
-    color: #fff;
-  }
-
-  .admin-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  :global(.admin-empty td) {
-    text-align: center;
-    color: var(--color-muted);
-    font-size: 0.95rem;
-  }
-
-  :global(.admin-patient-meta) {
-    margin-top: 0.35rem;
-    display: grid;
-    gap: 0.2rem;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-    text-align: center;
+  :global(.records-row--patient td:nth-child(2) .records-entry),
+  :global(.records-row--patient td:nth-child(4) .records-entry),
+  :global(.records-row--patient td:nth-child(5) .records-entry),
+  :global(.records-row--patient td:nth-child(6) .records-entry) {
     justify-items: center;
   }
 
+  :global(.records-row--patient .records-entry-header) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   :global(.admin-row-hint) {
-    margin: 0.6rem auto 0;
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
-    background: rgba(37, 99, 235, 0.16);
+    background: rgba(37, 99, 235, 0.14);
     color: #1d4ed8;
     font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    transition: background 0.18s ease, color 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease;
+  margin-top: 0.75rem;
+  align-self: flex-start;
+    justify-self: flex-start;
+  }
+
+  :global(.records-row--patient:hover .admin-row-hint),
+  :global(.records-row--patient:focus-within .admin-row-hint) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
   }
 
   :global(.admin-row-hint)::after {
@@ -420,29 +380,6 @@ import patientsClient from './patients.client.js?url';
     gap: 0.75rem;
     justify-content: center;
     width: 100%;
-  }
-
-  :global(.admin-cell) {
-    display: grid;
-    justify-items: center;
-    gap: 0.35rem;
-    width: 100%;
-    text-align: center;
-  }
-
-  :global(.admin-cell--person) {
-    gap: 0.45rem;
-    justify-items: start;
-    text-align: left;
-  }
-
-  :global(.admin-cell--person .admin-row-hint) {
-    margin-left: 0;
-    margin-right: auto;
-  }
-
-  :global(.admin-cell--stack) {
-    gap: 0.2rem;
   }
 
   :global(.admin-button) {

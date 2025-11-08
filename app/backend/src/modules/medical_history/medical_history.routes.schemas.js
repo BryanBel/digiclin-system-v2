@@ -14,6 +14,11 @@ export const listMedicalHistorySchema = z.object({
   offset: z.coerce.number().int().nonnegative().optional(),
 });
 
+export const listOwnMedicalHistorySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+});
+
 export const createMedicalHistorySchema = z.object({
   patientId: z.coerce.number().int().positive({ message: 'Selecciona un paciente válido.' }),
   entryDate: dateTimeSchema.optional(),

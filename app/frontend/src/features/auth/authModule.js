@@ -11,9 +11,14 @@ const login = async ({email, password}) => {
   user.set(userData);
 }
 
-const register = async ({ email, password, fullName, role }) => {
+const register = async ({ email, password, fullName, role, patientProfile }) => {
+  const payload = { email, password, fullName, role };
+  if (patientProfile && Object.keys(patientProfile).length > 0) {
+    payload.patientProfile = patientProfile;
+  }
+
   const response = await apiClient.post('/api/auth/register', {
-    json: { email, password, fullName, role }
+    json: payload
   });
   // Cuando se registra el backend envia un mensaje
   return await response.json();

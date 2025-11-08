@@ -1,8 +1,148 @@
 ---
-import Layout from "../layouts/Layout.astro";
-const locals = Astro.locals as { user?: unknown };
-const user = locals.user ?? null;
+import Layout from '../layouts/Layout.astro';
+
+const locals = (Astro.locals as any) ?? {};
+const user = locals?.user ?? null;
+const patientProfile = locals?.patientProfile ?? null;
+
 const isLoggedIn = Boolean(user);
+const isDoctor = user?.role === 'doctor';
+const isPatient = user?.role === 'patient';
+const shouldRenderForm = !isDoctor;
+
+type PrefillData = {
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  documentId: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  age: number | null;
+};
+
+const emptyPrefill: PrefillData = {
+  fullName: null,
+  email: null,
+  phone: null,
+  documentId: null,
+  birthDate: null,
+  gender: null,
+  age: null,
+};
+
+const sanitizePrefill = (input?: Partial<PrefillData> | null): PrefillData => ({
+  fullName:
+    typeof input?.fullName === 'string' && input.fullName.trim().length > 0
+      ? input.fullName.trim()
+      : null,
+  email:
+    typeof input?.email === 'string' && input.email.trim().length > 0 ? input.email.trim() : null,
+  phone:
+    typeof input?.phone === 'string' && input.phone.trim().length > 0 ? input.phone.trim() : null,
+  documentId:
+    typeof input?.documentId === 'string' && input.documentId.trim().length > 0
+      ? input.documentId.trim()
+      : null,
+  birthDate:
+    typeof input?.birthDate === 'string' && input.birthDate.trim().length > 0
+      ? input.birthDate.trim()
+      : null,
+  gender:
+    typeof input?.gender === 'string' && input.gender.trim().length > 0 ? input.gender.trim() : null,
+  age:
+    typeof input?.age === 'number' && Number.isFinite(input.age) ? input.age : null,
+});
+
+const parsePrefillFromQuery = (params: URLSearchParams | null | undefined): Partial<PrefillData> | null => {
+  if (!params) return null;
+  const raw = params.get('prefill');
+  if (!raw) return null;
+
+  try {
+    const decoded = decodeURIComponent(raw);
+    const parsed = JSON.parse(decoded) as Record<string, unknown> | null;
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const allowedKeys: Array<keyof PrefillData> = [
+      'fullName',
+      'email',
+      'phone',
+      'documentId',
+      'birthDate',
+      'gender',
+      'age',
+    ];
+
+    const filteredEntries = allowedKeys
+      .filter((key) => key in parsed)
+      .map((key) => [key, parsed[key]] as const);
+
+    return Object.fromEntries(filteredEntries) as Partial<PrefillData>;
+  } catch (error) {
+    console.warn('No se pudo interpretar el prefill desde la URL:', error);
+    return null;
+  }
+};
+
+const searchParams = Astro.url?.searchParams ?? new URLSearchParams();
+const urlPrefill = parsePrefillFromQuery(searchParams);
+
+const basePrefill = sanitizePrefill(
+  isPatient && patientProfile
+    ? {
+        fullName: patientProfile.fullName ?? null,
+        email: patientProfile.email ?? user?.email ?? null,
+        phone: patientProfile.phone ?? null,
+        documentId: patientProfile.documentId ?? null,
+        birthDate: patientProfile.birthDate ?? null,
+        gender: patientProfile.gender ?? null,
+        age:
+          typeof patientProfile.age === 'number' && Number.isFinite(patientProfile.age)
+            ? patientProfile.age
+            : null,
+      }
+    : {
+        email: user?.email ?? null,
+      },
+);
+
+const overridePrefill = sanitizePrefill(urlPrefill ?? undefined);
+
+const combinedPrefill = sanitizePrefill({
+  ...emptyPrefill,
+  ...basePrefill,
+  ...overridePrefill,
+});
+
+const hasPrefillData = Object.values(combinedPrefill).some((value) => {
+  if (typeof value === 'number') return Number.isFinite(value);
+  return value !== null;
+});
+
+const prefill: PrefillData | null = hasPrefillData ? combinedPrefill : null;
+
+const computeAgeFromDate = (dateInput?: string | null) => {
+  if (!dateInput) return null;
+
+  const birth = new Date(dateInput);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : 0;
+};
+
+const prefillAge = typeof prefill?.age === 'number' ? prefill.age : computeAgeFromDate(prefill?.birthDate ?? undefined);
+
+const envBackend = (import.meta.env.PUBLIC_BACKEND_URL ?? '').trim();
+const devBackend = import.meta.env.DEV ? 'http://localhost:3000' : '';
+const currentOrigin = Astro.url?.origin ?? '';
+const backendEndpoint = envBackend || devBackend || currentOrigin;
 ---
 
 <Layout title="DigiClin | Solicita una cita">
@@ -16,67 +156,146 @@ const isLoggedIn = Boolean(user);
         </p>
       </header>
 
-      <form id="appointment-request-form" class="request-form" novalidate>
-        <label class="request-field">
-          <span>Nombre completo</span>
-          <input
-            type="text"
-            name="fullName"
-            placeholder="Ingresa tu nombre"
-            required
-          />
-        </label>
+      {shouldRenderForm && (
+        <form
+          id="appointment-request-form"
+          class="request-form"
+          novalidate
+          data-prefill={prefill ? JSON.stringify(prefill) : undefined}
+          data-backend-url={backendEndpoint}
+        >
+          {isPatient && prefill ? (
+          <>
+            <section class="request-profile" aria-label="Datos del paciente">
+              <h2>Tu información registrada</h2>
+              <p>
+                Estos datos se utilizarán para tu solicitud. Si necesitas actualizarlos,
+                por favor contacta al equipo administrativo.
+              </p>
+              <dl>
+                <div>
+                  <dt>Nombre completo</dt>
+                  <dd>{prefill.fullName ?? 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Correo electrónico</dt>
+                  <dd>{prefill.email ?? 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Teléfono</dt>
+                  <dd>{prefill.phone ?? 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Documento</dt>
+                  <dd>{prefill.documentId ?? 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Fecha de nacimiento</dt>
+                  <dd>{prefill.birthDate ?? 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Género</dt>
+                  <dd>
+                    {prefill.gender === 'female'
+                      ? 'Femenino'
+                      : prefill.gender === 'male'
+                      ? 'Masculino'
+                      : prefill.gender ?? 'Sin registro'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Edad</dt>
+                  <dd>{typeof prefillAge === 'number' ? `${prefillAge} años` : 'Sin registro'}</dd>
+                </div>
+                <div>
+                  <dt>Rol</dt>
+                  <dd>Paciente</dd>
+                </div>
+              </dl>
+            </section>
 
-        <label class="request-field">
-          <span>Correo electrónico</span>
-          <input
-            type="email"
-            name="email"
-            placeholder="correo@ejemplo.com"
-            required
-          />
-        </label>
+            <input type="hidden" name="fullName" value={prefill.fullName ?? ''} />
+            <input type="hidden" name="email" value={prefill.email ?? ''} />
+            <input type="hidden" name="phone" value={prefill.phone ?? ''} />
+            <input type="hidden" name="documentId" value={prefill.documentId ?? ''} />
+            <input type="hidden" name="birthDate" value={prefill.birthDate ?? ''} />
+            <input type="hidden" name="gender" value={prefill.gender ?? ''} />
+            <input type="hidden" name="age" value={typeof prefillAge === 'number' ? prefillAge : ''} />
+          </>
+        ) : (
+          <>
+            <label class="request-field">
+              <span>Nombre completo</span>
+              <input
+                type="text"
+                name="fullName"
+                placeholder="Ingresa tu nombre"
+                required
+                value={prefill?.fullName ?? ''}
+              />
+            </label>
 
-        <label class="request-field">
-          <span>Teléfono de contacto</span>
-          <input type="tel" name="phone" placeholder="555-000-0000" required />
-        </label>
+            <label class="request-field">
+              <span>Correo electrónico</span>
+              <input
+                type="email"
+                name="email"
+                placeholder="correo@ejemplo.com"
+                required
+                value={prefill?.email ?? ''}
+              />
+            </label>
 
-        <div class="request-grid">
-          <label class="request-field">
-            <span>Cédula o documento</span>
-            <input
-              type="text"
-              name="documentId"
-              placeholder="V-00000000"
-              required
-            />
-          </label>
-          <label class="request-field">
-            <span>Fecha de nacimiento</span>
-            <input type="date" name="birthDate" required />
-          </label>
-        </div>
+            <label class="request-field">
+              <span>Teléfono de contacto</span>
+              <input
+                type="tel"
+                name="phone"
+                placeholder="(1234)-1234567"
+                required
+                value={prefill?.phone ?? ''}
+              />
+            </label>
 
-        <div class="request-grid">
-          <label class="request-field">
-            <span>Género</span>
-            <select name="gender" required>
-              <option value="">Selecciona</option>
-              <option value="female">Femenino</option>
-              <option value="male">Masculino</option>
-            </select>
-          </label>
-          <label class="request-field">
-            <span>Edad</span>
-            <input
-              type="number"
-              name="age"
-              placeholder="Se calcula automáticamente"
-              readonly
-            />
-          </label>
-        </div>
+            <div class="request-grid">
+              <label class="request-field">
+                <span>Cédula o documento</span>
+                <input
+                  type="text"
+                  name="documentId"
+                  placeholder="V-00000000"
+                  required
+                  value={prefill?.documentId ?? ''}
+                />
+              </label>
+              <label class="request-field">
+                <span>Fecha de nacimiento</span>
+                <input type="date" name="birthDate" required value={prefill?.birthDate ?? ''} />
+              </label>
+            </div>
+
+            <div class="request-grid">
+              <label class="request-field">
+                <span>Género</span>
+                <select name="gender" required value={prefill?.gender ?? ''}>
+                  <option value="">Selecciona</option>
+                  <option value="female">Femenino</option>
+                  <option value="male">Masculino</option>
+                </select>
+              </label>
+              <label class="request-field">
+                <span>Edad</span>
+                <input
+                  type="number"
+                  name="age"
+                  placeholder="Se calcula automáticamente"
+                  readonly
+                  value={typeof prefill?.age === 'number' ? prefill.age : typeof prefillAge === 'number' ? prefillAge : ''}
+                />
+              </label>
+            </div>
+          </>
+        )}
 
         <label class="request-field">
           <span>Describe tus síntomas o motivo</span>
@@ -103,123 +322,475 @@ const isLoggedIn = Boolean(user);
           </label>
         </div>
 
-        <label class="request-checkbox">
-          <input type="checkbox" name="isExistingPatient" />
-          <span>Ya soy paciente de DigiClin</span>
-        </label>
+        {isPatient ? (
+          <input type="hidden" name="isExistingPatient" value="on" />
+        ) : (
+          <label class="request-checkbox">
+            <input type="checkbox" name="isExistingPatient" />
+            <span>Ya soy paciente de DigiClin</span>
+          </label>
+        )}
 
-        <p id="request-feedback" class="request-feedback" role="status"></p>
+          <p id="request-feedback" class="request-feedback" role="status"></p>
 
-        <button type="submit" class="request-submit">Enviar solicitud</button>
-      </form>
+          <button type="submit" class="request-submit">Enviar solicitud</button>
 
-      {!isLoggedIn && (
-        <footer class="request-footer">
-          ¿Ya tienes cuenta? <a href="/login">Inicia sesión para gestionar tus citas</a>
-        </footer>
+          {!isLoggedIn && (
+            <p class="request-login-hint">
+              <a href="/login">Si ya tienes cuenta, puedes gestionar tus citas de forma mucho mejor.</a>
+            </p>
+          )}
+        </form>
       )}
     </div>
   </section>
 </Layout>
 
-<script type="module">
-  const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
-  const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
-
-  const rawProvidedEndpoint = (env.PUBLIC_BACKEND_URL ?? "").trim();
-  const isDev = env.DEV === true || env.DEV === "true" || env.MODE === "development";
-  const devFallback = isDev ? "http://localhost:3000" : "";
-  const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null"
-    ? runtimeOrigin
-    : "";
-
-  let baseEndpoint = rawProvidedEndpoint || runtimeFallback || devFallback;
-
-  if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
-    baseEndpoint = "http://localhost:3000";
+<style>
+  .request-profile {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
   }
 
-  baseEndpoint = baseEndpoint
-    .replace(/\/$/, "")
-    .replace(/\/api$/, "");
+  .request-profile h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
 
-  const REQUESTS_ENDPOINT = `${baseEndpoint}/api/appointment-requests`;
+  .request-profile p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
 
-  const form = document.querySelector("#appointment-request-form");
-  const feedback = document.querySelector("#request-feedback");
-  const submitButton = form.querySelector(".request-submit");
-  const birthDateInput = form.querySelector("input[name='birthDate']");
-  const ageInput = form.querySelector("input[name='age']");
+  .request-profile dl {
+    display: grid;
+    gap: 1rem 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin: 0;
+  }
 
-  const calculateAge = (value) => {
-    if (!value) return "";
-    const reference = new Date();
-    const birth = new Date(value);
-    if (Number.isNaN(birth.getTime())) return "";
-    let age = reference.getFullYear() - birth.getFullYear();
-    const monthDiff = reference.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && reference.getDate() < birth.getDate())) {
-      age -= 1;
+  .request-profile dl > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .request-profile dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+  }
+
+  .request-profile dd {
+    margin: 0;
+    min-height: 1.2rem;
+    font-weight: 600;
+    word-break: break-word;
+  }
+
+  .request-login-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.95rem;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .request-login-hint a {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .request-info {
+    display: grid;
+    gap: 1rem;
+    padding: 2.5rem;
+    border-radius: 1.25rem;
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.08);
+    text-align: center;
+  }
+
+  .request-info h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .request-info p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 1rem;
+  }
+
+  .request-info__link {
+    display: inline-flex;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 999px;
+    background: var(--color-accent-primary, #3b82f6);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .request-info__link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px -24px rgba(59, 130, 246, 0.65);
+  }
+</style>
+
+{shouldRenderForm && (
+  <script type="module">
+    (() => {
+    const form = document.querySelector("#appointment-request-form");
+    const feedback = document.querySelector("#request-feedback");
+
+    if (!form || !feedback) {
+      return;
     }
-    return age >= 0 ? String(age) : "";
-  };
 
-  const refreshAgeField = () => {
-    if (!ageInput) return;
-    const ageValue = calculateAge(birthDateInput?.value);
-    ageInput.value = ageValue;
-  };
+    const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
+    const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    const runtimeFallback = runtimeOrigin && runtimeOrigin !== "null"
+      ? runtimeOrigin
+      : "";
 
-  birthDateInput?.addEventListener("change", refreshAgeField);
+    const datasetEndpoint = typeof form.dataset?.backendUrl === "string"
+      ? form.dataset.backendUrl.trim()
+      : "";
+    const rawProvidedEndpoint = datasetEndpoint || (env.PUBLIC_BACKEND_URL ?? "").trim();
+    const isDev = env.DEV === true || env.DEV === "true" || env.MODE === "development";
+    const devEndpoint = "http://localhost:3000";
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    feedback.textContent = "";
-    submitButton.disabled = true;
-    submitButton.textContent = "Enviando...";
+    let baseEndpoint = rawProvidedEndpoint;
 
-    const formData = new FormData(form);
-    const payload = {
-      fullName: formData.get("fullName")?.toString().trim(),
-      email: formData.get("email")?.toString().trim(),
-      phone: formData.get("phone")?.toString().trim(),
-      documentId: formData.get("documentId")?.toString().trim(),
-      birthDate: formData.get("birthDate")?.toString(),
-      gender: formData.get("gender")?.toString() || undefined,
-      age: ageInput?.value ? Number(ageInput.value) : undefined,
-      symptoms: formData.get("symptoms")?.toString().trim(),
-      preferredDate: formData.get("preferredDate") || undefined,
-      preferredTimeRange: formData.get("preferredTimeRange") || undefined,
-      isExistingPatient: formData.get("isExistingPatient") === "on",
+    if (!baseEndpoint) {
+      if (isDev) {
+        baseEndpoint = devEndpoint;
+      } else if (runtimeFallback) {
+        baseEndpoint = runtimeFallback;
+      }
+    }
+
+    if (!baseEndpoint && runtimeOrigin.includes("localhost")) {
+      baseEndpoint = devEndpoint;
+    }
+
+    if (!baseEndpoint) {
+      baseEndpoint = runtimeFallback || devEndpoint || "";
+    }
+
+    baseEndpoint = baseEndpoint
+      .replace(/\/$/, "")
+      .replace(/\/api$/, "");
+
+    const REQUESTS_ENDPOINT = `${baseEndpoint}/api/appointment-requests`;
+    const PATIENT_LOOKUP_ENDPOINT = `${baseEndpoint}/api/patients/lookup`;
+
+    const submitButton = form.querySelector(".request-submit");
+    if (!(submitButton instanceof HTMLButtonElement)) {
+      console.warn("No se encontró el botón de envío del formulario de citas.");
+      return;
+    }
+    const birthDateInput = form.querySelector("input[name='birthDate']");
+    const ageInput = form.querySelector("input[name='age']");
+    const fullNameInput = form.querySelector("input[name='fullName']");
+    const emailInput = form.querySelector("input[name='email']");
+    const phoneInput = form.querySelector("input[name='phone']");
+    const documentIdInput = form.querySelector("input[name='documentId']");
+    const genderSelect = form.querySelector("select[name='gender']");
+    const existingPatientCheckbox = form.querySelector("input[name='isExistingPatient']");
+    const existingPatientToggle =
+      existingPatientCheckbox instanceof HTMLInputElement &&
+      existingPatientCheckbox.type === "checkbox"
+        ? existingPatientCheckbox
+        : null;
+
+    const FEEDBACK_CLASSES = ["request-feedback--error", "request-feedback--success"];
+
+    const setFeedbackMessage = (message = "", variant = null) => {
+      FEEDBACK_CLASSES.forEach((className) => feedback.classList.remove(className));
+      feedback.textContent = typeof message === "string" ? message : "";
+      if (variant === "error") {
+        feedback.classList.add("request-feedback--error");
+      } else if (variant === "success") {
+        feedback.classList.add("request-feedback--success");
+      }
     };
 
-    try {
-      const response = await fetch(REQUESTS_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const clearFeedbackMessage = () => setFeedbackMessage("", null);
+
+    const normalizeDateOnly = (candidate) => {
+      if (!(candidate instanceof Date) || Number.isNaN(candidate.getTime())) return null;
+      const normalized = new Date(candidate.getTime());
+      normalized.setHours(0, 0, 0, 0);
+      return normalized;
+    };
+
+    const resolveBirthDate = () => {
+      if (!(birthDateInput instanceof HTMLInputElement)) return null;
+      if (birthDateInput.valueAsDate instanceof Date) {
+        return normalizeDateOnly(birthDateInput.valueAsDate);
+      }
+      if (!birthDateInput.value) return null;
+      return normalizeDateOnly(new Date(birthDateInput.value));
+    };
+
+    const calculateAge = () => {
+      const birth = resolveBirthDate();
+      if (!birth) return { value: "", error: birthDateInput?.value ? "Selecciona una fecha de nacimiento válida" : "" };
+
+      const today = normalizeDateOnly(new Date());
+      if (!today) return { value: "", error: "No se pudo calcular la fecha actual" };
+
+      if (birth > today) {
+        return { value: "", error: "La fecha de nacimiento no puede estar en el futuro" };
+      }
+
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age -= 1;
+      }
+
+      return { value: String(Math.max(age, 0)), error: "" };
+    };
+
+    const refreshAgeField = () => {
+      if (!ageInput) return;
+      const { value, error } = calculateAge();
+      ageInput.value = value;
+
+      if (birthDateInput instanceof HTMLInputElement) {
+        birthDateInput.setCustomValidity(error);
+        if (error) {
+          birthDateInput.reportValidity();
+        }
+      }
+    };
+
+    const patientPrefillCache = new Map();
+
+    const hasRelevantPatientData = (patient) => {
+      if (!patient || typeof patient !== "object") return false;
+      const keysToCheck = [
+        "fullName",
+        "phone",
+        "documentId",
+        "birthDate",
+        "gender",
+        "age",
+      ];
+
+      return keysToCheck.some((key) => {
+        const value = patient[key];
+        if (typeof value === "number") {
+          return Number.isFinite(value);
+        }
+        if (typeof value === "string") {
+          return value.trim().length > 0;
+        }
+        return Boolean(value);
+      });
+    };
+
+    const applyPatientPrefill = (patient) => {
+      if (!patient) return;
+
+      const ensureString = (value) => (typeof value === "string" ? value : "");
+
+      if (fullNameInput instanceof HTMLInputElement) {
+        fullNameInput.value = ensureString(patient.fullName);
+      }
+      if (emailInput instanceof HTMLInputElement) {
+        emailInput.value = ensureString(patient.email);
+      }
+      if (phoneInput instanceof HTMLInputElement) {
+        phoneInput.value = ensureString(patient.phone);
+      }
+      if (documentIdInput instanceof HTMLInputElement) {
+        documentIdInput.value = ensureString(patient.documentId);
+      }
+      if (birthDateInput instanceof HTMLInputElement && typeof patient.birthDate === "string") {
+        birthDateInput.value = patient.birthDate;
+      }
+      if (genderSelect instanceof HTMLSelectElement && typeof patient.gender === "string") {
+        const normalizedGender = patient.gender.toLowerCase();
+        const optionExists = Array.from(genderSelect.options).some(
+          (option) => option.value.toLowerCase() === normalizedGender,
+        );
+        if (optionExists) {
+          genderSelect.value = normalizedGender;
+        }
+      }
+      if (ageInput instanceof HTMLInputElement && typeof patient.age === "number") {
+        ageInput.value = String(patient.age);
+      }
+
+      refreshAgeField();
+    };
+
+    const fetchPatientProfile = async (email) => {
+      const cached = patientPrefillCache.get(email);
+      if (cached) return cached;
+
+      const lookupUrl = `${PATIENT_LOOKUP_ENDPOINT}?email=${encodeURIComponent(email)}`;
+      const response = await fetch(lookupUrl, {
         credentials: "include",
-        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data?.error ?? "No se pudo enviar la solicitud");
+      const contentType = response.headers.get("content-type") ?? "";
+      const isJson = contentType.includes("application/json");
+      const parsedBody = isJson
+        ? await response.json().catch(() => ({}))
+        : await response.text().catch(() => "");
 
-      feedback.textContent =
-        "Solicitud enviada correctamente. Revisa tu correo para más detalles.";
-      feedback.classList.remove("request-feedback--error");
-      feedback.classList.add("request-feedback--success");
-      form.reset();
-    } catch (error) {
-      feedback.textContent = error.message;
-      feedback.classList.remove("request-feedback--success");
-      feedback.classList.add("request-feedback--error");
-    } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = "Enviar solicitud";
+      if (!response.ok) {
+        const message =
+          (typeof parsedBody === "string" && parsedBody) ||
+          parsedBody?.error ||
+          parsedBody?.message ||
+          "No se pudo obtener los datos del paciente";
+        const error = new Error(message);
+        Object.assign(error, { status: response.status });
+        throw error;
+      }
+
+      const patient = parsedBody?.patient ?? null;
+      if (patient) {
+        patientPrefillCache.set(email, patient);
+      }
+      return patient;
+    };
+
+    const handleExistingPatientToggle = async () => {
+      if (!existingPatientToggle?.checked) {
+        return;
+      }
+
+      const emailValue =
+        emailInput instanceof HTMLInputElement ? emailInput.value.trim().toLowerCase() : "";
+
+      if (!emailValue) {
+        setFeedbackMessage("Ingresa tu correo antes de marcar que ya eres paciente.", "error");
+        existingPatientToggle.checked = false;
+        emailInput?.focus();
+        return;
+      }
+
+      try {
+        existingPatientToggle.disabled = true;
+        setFeedbackMessage("Buscando tu perfil de paciente registrado...", null);
+
+        const patient = await fetchPatientProfile(emailValue);
+
+        if (!patient || !hasRelevantPatientData(patient)) {
+          setFeedbackMessage(
+            "Aún no encontramos datos de paciente con ese correo. Regístrate para completar tu información.",
+            "error",
+          );
+          existingPatientToggle.checked = false;
+          return;
+        }
+
+        applyPatientPrefill(patient);
+        setFeedbackMessage("Hemos completado tus datos registrados en DigiClin.", "success");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "No se pudo buscar tu perfil de paciente.";
+        setFeedbackMessage(message, "error");
+        existingPatientToggle.checked = false;
+      } finally {
+        existingPatientToggle.disabled = false;
+        refreshAgeField();
+      }
+    };
+
+    existingPatientToggle?.addEventListener("change", handleExistingPatientToggle);
+
+    birthDateInput?.addEventListener("change", refreshAgeField);
+    birthDateInput?.addEventListener("input", refreshAgeField);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearFeedbackMessage();
       refreshAgeField();
-    }
-  });
+      if (!form.reportValidity()) {
+        return;
+      }
 
-  refreshAgeField();
-</script>
+      submitButton.disabled = true;
+      submitButton.textContent = "Enviando...";
+
+      const formData = new FormData(form);
+      const payload = {
+        fullName: formData.get("fullName")?.toString().trim(),
+        email: formData.get("email")?.toString().trim(),
+        phone: formData.get("phone")?.toString().trim(),
+        documentId: formData.get("documentId")?.toString().trim(),
+        birthDate: formData.get("birthDate")?.toString(),
+        gender: formData.get("gender")?.toString() || undefined,
+        age: ageInput?.value ? Number(ageInput.value) : undefined,
+        symptoms: formData.get("symptoms")?.toString().trim(),
+        preferredDate: formData.get("preferredDate") || undefined,
+        preferredTimeRange: formData.get("preferredTimeRange") || undefined,
+        isExistingPatient: formData.get("isExistingPatient") === "on",
+      };
+
+      try {
+        const response = await fetch(REQUESTS_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+        const contentType = response.headers.get("content-type") ?? "";
+        const isJsonResponse = contentType.includes("application/json");
+        const parsedBody = isJsonResponse
+          ? await response.json().catch(() => ({}))
+          : await response.text().catch(() => "");
+
+        if (!response.ok) {
+          const message = (typeof parsedBody === "string" && parsedBody) || parsedBody?.error || parsedBody?.message;
+          throw new Error(message || "No se pudo enviar la solicitud");
+        }
+
+        setFeedbackMessage(
+          "Solicitud enviada correctamente. Revisa tu correo para más detalles.",
+          "success",
+        );
+        form.reset();
+        existingPatientToggle?.blur();
+        if (existingPatientToggle) {
+          existingPatientToggle.checked = false;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo enviar la solicitud";
+        setFeedbackMessage(message, "error");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Enviar solicitud";
+        refreshAgeField();
+      }
+    });
+
+    refreshAgeField();
+    })();
+  </script>
+)}
