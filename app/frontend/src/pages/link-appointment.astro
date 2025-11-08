@@ -37,7 +37,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
         </p>
       </header>
 
-      <section class="link-details" aria-live="polite">
+      <section class="link-details" aria-live="polite" data-has-details="false">
         <dl id="link-details"></dl>
       </section>
 
@@ -65,11 +65,13 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
 
     const token = typeof host.dataset.token === "string" ? host.dataset.token.trim() : "";
     const loggedIn = host.dataset.loggedIn === "true";
-    const datasetBackend = typeof host.dataset.backendUrl === "string" ? host.dataset.backendUrl.trim() : "";
+    const datasetBackend =
+      typeof host.dataset.backendUrl === "string" ? host.dataset.backendUrl.trim() : "";
 
     const env = typeof import.meta !== "undefined" && import.meta?.env ? import.meta.env : {};
     const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
-    const envBackend = typeof env.PUBLIC_BACKEND_URL === "string" ? env.PUBLIC_BACKEND_URL.trim() : "";
+    const envBackend =
+      typeof env.PUBLIC_BACKEND_URL === "string" ? env.PUBLIC_BACKEND_URL.trim() : "";
     const devEndpoint = env.DEV === true || env.DEV === "true" ? "http://localhost:3000" : "";
 
     const LINKED_STORAGE_KEY = "digiclinLinkedRequestInfo";
@@ -83,7 +85,9 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
     })();
 
     const endpoints = {
-      validate: token ? `${baseEndpoint}/api/appointment-requests/link/${encodeURIComponent(token)}` : null,
+      validate: token
+        ? `${baseEndpoint}/api/appointment-requests/link/${encodeURIComponent(token)}`
+        : null,
       link: token ? `${baseEndpoint}/api/appointment-requests/link` : null,
     };
 
@@ -92,6 +96,15 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
       error: "link-status--error",
       info: "link-status--info",
     };
+
+    const STATUS_LABELS = {
+      pending: "Pendiente",
+      confirmed: "Confirmada",
+      rejected: "Rechazada",
+      reschedule: "Por reprogramar",
+    };
+
+    let currentDetails = null;
 
     const readLinkedInfo = () => {
       if (typeof window === "undefined") return null;
@@ -134,20 +147,75 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
       statusEl.textContent = message;
     };
 
+    const pickString = (...candidates) => {
+      for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim().length > 0) {
+          return candidate.trim();
+        }
+      }
+      return null;
+    };
+
+    const normalizeDetails = (payload) => {
+      if (!payload || typeof payload !== "object") return null;
+
+      const rawStatus = pickString(payload.status, payload.statusRaw, payload.status_label);
+      const normalizedStatus = rawStatus ? rawStatus.toLowerCase() : null;
+      const createdSource = payload.createdAt ?? payload.created_at ?? null;
+      const createdDate = createdSource ? new Date(createdSource) : null;
+      const createdIsValid = createdDate instanceof Date && !Number.isNaN(createdDate?.getTime());
+
+      return {
+        fullName: pickString(payload.fullName, payload.full_name),
+        email: pickString(payload.email),
+        statusRaw: normalizedStatus,
+        statusLabel:
+          normalizedStatus && STATUS_LABELS[normalizedStatus] ? STATUS_LABELS[normalizedStatus] : null,
+        createdAtIso: createdIsValid ? createdDate.toISOString() : null,
+        createdAtText: createdIsValid
+          ? new Intl.DateTimeFormat(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(createdDate)
+          : null,
+      };
+    };
+
+    const mergeDetails = (payload) => {
+      const normalized = normalizeDetails(payload);
+      if (!normalized) return currentDetails;
+
+      const next = {
+        ...(currentDetails ?? {}),
+        ...Object.fromEntries(
+          Object.entries(normalized).filter(([, value]) => value !== null && value !== undefined),
+        ),
+      };
+
+      if (!next.statusLabel && next.statusRaw && STATUS_LABELS[next.statusRaw]) {
+        next.statusLabel = STATUS_LABELS[next.statusRaw];
+      }
+
+      currentDetails = next;
+      return currentDetails;
+    };
+
     const renderDetails = (payload) => {
       if (!(detailsEl instanceof HTMLElement)) return;
+      const details = payload ? mergeDetails(payload) : currentDetails;
       detailsEl.innerHTML = "";
-      if (!payload) return;
+      if (!details) return;
 
       const entries = [
-        ["Nombre registrado", payload.fullName ?? "Sin registro"],
-        ["Correo", payload.email ?? "Sin registro"],
-        ["Estado", payload.status ?? "Pendiente"],
-        ["Creada", payload.createdAt ? new Date(payload.createdAt).toLocaleString() : "Sin registro"],
+        ["Nombre registrado", details.fullName ?? "Sin registro"],
+        ["Correo", details.email ?? "Sin registro"],
+        ["Estado", details.statusLabel ?? "Pendiente"],
+        ["Creada", details.createdAtText ?? "Sin registro"],
       ];
 
       for (const [label, value] of entries) {
         const wrapper = document.createElement("div");
+        wrapper.className = "link-details__item";
         const dt = document.createElement("dt");
         dt.textContent = label;
         const dd = document.createElement("dd");
@@ -155,6 +223,11 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
         wrapper.append(dt, dd);
         detailsEl.append(wrapper);
       }
+    };
+
+    const ensureDetailsAreVisible = () => {
+      if (!(detailsEl instanceof HTMLElement)) return;
+      detailsEl.parentElement?.setAttribute("data-has-details", currentDetails ? "true" : "false");
     };
 
     const storePendingToken = () => {
@@ -219,8 +292,10 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
         }
 
         if (typeof parsed === "object" && parsed !== null) {
-          renderDetails(parsed.request);
+          renderDetails(parsed.request ?? null);
+          ensureDetailsAreVisible();
         }
+
         clearPendingToken();
         writeLinkedInfo({
           message:
@@ -230,6 +305,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
           status: typeof parsed?.status === "string" ? parsed.status : "LINKED",
         });
         toggleButtons({ showAction: false, showLogin: false });
+        ensureDetailsAreVisible();
         setStatus(
           typeof parsed?.message === "string"
             ? parsed.message
@@ -240,6 +316,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
         const message = error instanceof Error ? error.message : "Falló la vinculación.";
         setStatus(message, "error");
         toggleButtons({ showAction: true, showLogin: false });
+        ensureDetailsAreVisible();
       } finally {
         if (actionButton instanceof HTMLButtonElement) {
           actionButton.disabled = false;
@@ -252,6 +329,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
       if (!token) {
         setStatus("El enlace proporcionado no es válido.", "error");
         toggleButtons({ showAction: false, showLogin: false });
+        ensureDetailsAreVisible();
         return;
       }
 
@@ -265,12 +343,14 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
           stored.status === "ALREADY_LINKED" ? "info" : "success",
         );
         toggleButtons({ showAction: false, showLogin: false });
+        ensureDetailsAreVisible();
         return;
       }
 
       if (!endpoints.validate) {
         setStatus("No pudimos determinar el servidor de verificación.", "error");
         toggleButtons({ showAction: false, showLogin: false });
+        ensureDetailsAreVisible();
         return;
       }
 
@@ -295,7 +375,8 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
         }
 
         if (typeof parsed === "object" && parsed !== null) {
-          renderDetails(parsed.request);
+          renderDetails(parsed.request ?? null);
+          ensureDetailsAreVisible();
         }
 
         if (loggedIn) {
@@ -322,6 +403,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
           setStatus(message, "error");
           toggleButtons({ showAction: false, showLogin: false });
         }
+        ensureDetailsAreVisible();
       }
     };
 
@@ -333,7 +415,7 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
       window.location.href = `/login?next=${encodeURIComponent(nextUrl)}`;
     });
 
-    validateToken();
+    validateToken().finally(ensureDetailsAreVisible);
   }
 </script>
 
@@ -348,62 +430,121 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
     width: min(520px, 100%);
     padding: clamp(1.75rem, 4vw, 2.75rem);
     border-radius: 1.5rem;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
+    background: var(--color-card-bg, #ffffff);
+    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+    box-shadow: var(--shadow-card, 0 28px 60px -38px rgba(15, 23, 42, 0.25));
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.75rem;
+    color: var(--color-body-text, #0f172a);
+  }
+
+  .dark .link-card {
+    background: var(--color-card-bg, #151f32);
+    border-color: var(--color-border, rgba(104, 148, 255, 0.22));
+    box-shadow: var(--shadow-card, 0 32px 70px -34px rgba(9, 17, 32, 0.75));
   }
 
   .link-header h1 {
     margin: 0;
     font-size: clamp(1.8rem, 3.4vw, 2.35rem);
     font-weight: 700;
-    color: var(--color-heading, #f8fafc);
+    color: var(--color-body-text, #0f172a);
+  }
+
+  .dark .link-header h1 {
+    color: var(--color-body-text, #f8fbff);
   }
 
   .link-status {
     margin: 0.75rem 0 0;
     font-size: 1rem;
-    color: var(--color-muted, #cbd5f5);
+    color: var(--color-muted, #64748b);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background-color: rgba(148, 163, 184, 0.16);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .dark .link-status {
+    color: var(--color-muted, #aeb8cc);
+    background-color: rgba(148, 163, 184, 0.22);
   }
 
   .link-status--success {
-    color: #22c55e;
+    color: #166534;
+    background-color: rgba(34, 197, 94, 0.16);
   }
 
   .link-status--error {
-    color: #f87171;
+    color: #b91c1c;
+    background-color: rgba(248, 113, 113, 0.18);
   }
 
   .link-status--info {
-    color: #60a5fa;
+    color: #1d4ed8;
+    background-color: rgba(29, 78, 216, 0.16);
   }
 
-  .link-details dl,
-  .link-details {
+  .dark .link-status--success {
+    color: #4ade80;
+    background-color: rgba(34, 197, 94, 0.2);
+  }
+
+  .dark .link-status--error {
+    color: #fda4af;
+    background-color: rgba(248, 113, 113, 0.25);
+  }
+
+  .dark .link-status--info {
+    color: #93c5fd;
+    background-color: rgba(59, 130, 246, 0.22);
+  }
+
+  .link-details,
+  .link-details dl {
     margin: 0;
     display: grid;
     gap: 0.85rem;
   }
 
-  .link-details div {
+  .link-details__item {
     display: grid;
     gap: 0.35rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
   }
 
-  .link-details dt {
+  .link-details__item:last-of-type {
+    border-bottom: none;
+  }
+
+  .dark .link-details__item {
+    border-color: var(--color-border, rgba(104, 148, 255, 0.18));
+  }
+
+  .link-details__item dt {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--color-muted, #a5b4fc);
+    color: var(--color-muted, #64748b);
   }
 
-  .link-details dd {
+  .dark .link-details__item dt {
+    color: var(--color-muted, #aeb8cc);
+  }
+
+  .link-details__item dd {
     margin: 0;
     font-weight: 600;
-    color: var(--color-heading, #f8fafc);
+    color: var(--color-body-text, #0f172a);
+  }
+
+  .dark .link-details__item dd {
+    color: var(--color-body-text, #f8fbff);
   }
 
   .link-actions {
@@ -414,33 +555,59 @@ const backendEndpoint = envBackend || devBackend || currentOrigin;
 
   .link-action,
   .link-login {
-    border: none;
     border-radius: 999px;
     padding: 0.85rem 1.4rem;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease,
+      color 0.2s ease;
   }
 
   .link-action {
+    border: none;
     background: linear-gradient(135deg, #2563eb, #38bdf8);
-    color: #0f172a;
+    color: #ffffff;
+    box-shadow: 0 20px 40px -22px rgba(37, 99, 235, 0.55);
   }
 
   .link-action:disabled {
     opacity: 0.65;
     cursor: not-allowed;
+    box-shadow: none;
   }
 
   .link-login {
-    background: rgba(59, 130, 246, 0.12);
-    color: #bfdbfe;
+    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+    background: transparent;
+    color: var(--color-body-text, #0f172a);
+  }
+
+  .dark .link-login {
+    border-color: var(--color-border, rgba(104, 148, 255, 0.22));
+    color: var(--color-muted, #aeb8cc);
   }
 
   .link-action:hover:not(:disabled),
   .link-login:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 14px 32px rgba(37, 99, 235, 0.25);
+  }
+
+  .link-login:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 640px) {
+    .link-card {
+      padding: clamp(1.5rem, 6vw, 2.5rem);
+      border-radius: 1.25rem;
+      gap: 1.5rem;
+    }
+
+    .link-header h1 {
+      font-size: clamp(1.6rem, 7vw, 2.1rem);
+    }
   }
 </style>
