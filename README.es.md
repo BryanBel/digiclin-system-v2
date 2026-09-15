@@ -102,7 +102,7 @@ Las variables de entorno se cargan desde `app/backend/.env`.
 
 | Variable | Para qué |
 | -------- | -------- |
-| `DATABASE_URL` | Cadena de conexión de PostgreSQL |
+| `DATABASE_URL` | Cadena de conexión de PostgreSQL — cualquier proveedor; el backend usa `pg`, no un SDK |
 | `ACCESS_TOKEN_SECRET` | Firma la cookie de sesión — 48 bytes aleatorios, no una palabra |
 | `EMAIL_VERIFICATION_SECRET` | Firma los enlaces de verificación — mantenlo distinto del anterior |
 | `CORS_ORIGIN` | Lista blanca de orígenes, separada por comas |

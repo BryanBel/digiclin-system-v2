@@ -100,7 +100,7 @@ Environment variables are loaded from `app/backend/.env`.
 
 | Variable | Purpose |
 | -------- | ------- |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | PostgreSQL connection string — any provider; the backend speaks plain `pg`, not a vendor SDK |
 | `ACCESS_TOKEN_SECRET` | Signs the session cookie — 48 random bytes, not a word |
 | `EMAIL_VERIFICATION_SECRET` | Signs verification links — keep it different from the one above |
 | `CORS_ORIGIN` | Comma-separated allowlist of origins |
