@@ -105,7 +105,8 @@ Environment variables are loaded from `app/backend/.env`.
 | `EMAIL_VERIFICATION_SECRET` | Signs verification links — keep it different from the one above |
 | `CORS_ORIGIN` | Comma-separated allowlist of origins |
 | `BACKEND_URL` / `FRONTEND_URL` | Used to build links in outgoing email; must match the deployed domains |
-| `RESEND_API_KEY` *or* `EMAIL_USER` + `EMAIL_PASS` | Email delivery, through [Resend](https://resend.com) or plain SMTP |
+| `RESEND_API_KEY` *or* `EMAIL_USER` + `EMAIL_PASS` | Email delivery, through [Resend](https://resend.com) or plain SMTP. Either alone is enough — Resend is tried first and falls back to SMTP |
+| `EMAIL_REDIRECT_TO` | Development only: sends every outgoing message here instead of to the real recipient, since Resend's free tier only delivers to the account's verified address. Ignored when `NODE_ENV=prod` |
 | `SEED_PASSWORD` | Password for the accounts `pnpm run seed:prod` creates. At least 12 characters; the script refuses to run without it |
 
 `app/backend/.env.example` lists every variable the code reads. Copy it to `.env` and fill
