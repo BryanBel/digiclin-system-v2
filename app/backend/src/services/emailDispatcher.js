@@ -1,4 +1,4 @@
-import resend from './resend.js';
+import { getResendClient } from './resend.js';
 import nodemailerService from './nodemailer.js';
 
 const toArray = (value) => {
@@ -16,11 +16,25 @@ const buildMessage = ({ to, subject, text, html, from }) => {
   const fallbackFrom =
     from || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_USER || 'onboarding@resend.dev';
 
-  const forcedInbox = process.env.RESEND_TEST_RECIPIENT?.trim() || 'bryanbelandriav@gmail.com';
   const requestedRecipients = toArray(to);
-  const forcedRecipients = forcedInbox ? [forcedInbox] : requestedRecipients;
 
-  // Remove the overrides tied to forcedInbox once Resend accepts all domains.
+  // Desvio de correo para desarrollo.
+  //
+  // El plan gratuito de Resend solo entrega a la direccion verificada de la cuenta, asi
+  // que durante el desarrollo todo se redirigia a una sola bandeja. Esa redireccion tenia
+  // como valor por defecto un correo personal escrito en el codigo, y la condicion que la
+  // activaba era siempre verdadera -- de modo que en produccion cada mensaje del sistema
+  // llegaba a esa bandeja en lugar de al paciente. Nadie recibia su enlace de
+  // verificacion, y por tanto nadie podia activar su cuenta.
+  //
+  // Ahora hay que pedirla explicitamente, no tiene valor por defecto, y no se aplica en
+  // produccion bajo ninguna circunstancia: el costo de equivocarse aqui es que el sistema
+  // deje de funcionar en silencio, y el de la guarda es cero.
+  const isProduction = process.env.NODE_ENV === 'prod';
+  const redirectInbox = isProduction ? null : process.env.EMAIL_REDIRECT_TO?.trim() || null;
+
+  const forcedInbox = redirectInbox;
+  const forcedRecipients = forcedInbox ? [forcedInbox] : requestedRecipients;
   const baseSubject = subject ?? '';
   const baseText = typeof text === 'string' ? text : '';
   const baseHtml = typeof html === 'string' ? html : null;
@@ -63,6 +77,9 @@ const sendViaResend = async ({ to, subject, text, html, from }) => {
   if (!process.env.RESEND_API_KEY) {
     return false;
   }
+
+  const resend = getResendClient();
+  if (!resend) return false;
 
   const message = buildMessage({ to, subject, text, html, from });
 
