@@ -22,6 +22,7 @@ import { APPOINTMENT_REQUEST_STATUS } from './appointment_requests.constants.js'
 import { sendEmail } from '../../services/emailDispatcher.js';
 import usersRepository from '../users/users.repository.js';
 import { buildFrontendUrl } from '../../utils/urlHelpers.js';
+import { requireStaff } from '../auth/auth.middlewares.js';
 
 const router = Router();
 
@@ -41,7 +42,7 @@ const formatRecipient = ({ email, fullName, role = 'patient' }) => {
   return `${normalizedName} <${email}>`;
 };
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireStaff, async (req, res, next) => {
   try {
     const query = listAppointmentRequestsSchema.parse(req.query);
     const requests = await listAppointmentRequests(query);
@@ -202,7 +203,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireStaff, async (req, res, next) => {
   try {
     const body = updateAppointmentRequestSchema.parse(req.body);
     const request = await updateAppointmentRequestStatus({
@@ -219,7 +220,7 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/:id/confirm', async (req, res, next) => {
+router.post('/:id/confirm', requireStaff, async (req, res, next) => {
   try {
     const payload = confirmAppointmentRequestSchema.parse(req.body);
     const doctorEmail = payload.doctorEmail.trim().toLowerCase();
@@ -234,7 +235,7 @@ router.post('/:id/confirm', async (req, res, next) => {
       doctorId: doctor.id,
       scheduledFor: payload.scheduledFor,
       adminNote: payload.adminNote,
-      createdByUser: res.locals.user?.id ?? null,
+      createdByUser: res.locals.user.id,
     });
 
     const scheduledForText =
@@ -274,7 +275,7 @@ router.post('/:id/confirm', async (req, res, next) => {
   }
 });
 
-router.post('/:id/reschedule', async (req, res, next) => {
+router.post('/:id/reschedule', requireStaff, async (req, res, next) => {
   try {
     const payload = rescheduleAppointmentRequestSchema.parse(req.body);
 
@@ -298,7 +299,7 @@ router.post('/:id/reschedule', async (req, res, next) => {
   }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requireStaff, async (req, res, next) => {
   try {
     const request = await findAppointmentRequestById({ id: req.params.id });
     if (!request) return res.status(404).json({ error: 'Solicitud no encontrada' });

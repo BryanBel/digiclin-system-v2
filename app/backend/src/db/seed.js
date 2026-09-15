@@ -2,7 +2,29 @@ import bcrypt from 'bcrypt';
 import pool from './pool.js';
 import { calculateAge } from '../utils/dateHelpers.js';
 
-const DEFAULT_PASSWORD = 'Admin123!';
+/**
+ * Contrasena de las cuentas sembradas.
+ *
+ * Estuvo escrita aqui como 'Admin123!', en un repositorio publico, sobre una cuenta con
+ * rol admin y verify_email en true. Cualquiera que leyera el repo tenia las credenciales
+ * de administrador de cualquier despliegue donde este script hubiera corrido.
+ *
+ * Ahora viene de SEED_PASSWORD y el script se niega a sembrar si falta, en vez de
+ * recurrir a un valor por defecto: un valor por defecto vuelve a ser una contrasena
+ * conocida, que es exactamente el problema que se esta corrigiendo.
+ */
+const DEFAULT_PASSWORD = process.env.SEED_PASSWORD;
+
+if (!DEFAULT_PASSWORD || DEFAULT_PASSWORD.length < 12) {
+  console.error(
+    'Falta SEED_PASSWORD, o tiene menos de 12 caracteres.',
+    'Define una en el .env antes de sembrar la base. Para generar una:',
+  );
+  console.error(
+    `  node -e "console.log(require('crypto').randomBytes(18).toString('base64url'))"`,
+  );
+  process.exit(1);
+}
 
 const ensureAdminUser = async () => {
   const adminEmail = 'admin@digiclin.test';

@@ -7,7 +7,7 @@ import {
   listAppointmentsForPatient,
 } from './appointments.repository.js';
 import { z } from 'zod';
-import { authenticateUser } from '../auth/auth.middlewares.js';
+import { authenticateUser, requireStaff } from '../auth/auth.middlewares.js';
 import {
   ensurePatientFromRequest,
   ensurePatientForUserRegistration,
@@ -178,7 +178,7 @@ router.get('/mine', authenticateUser, async (req, res, next) => {
   }
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireStaff, async (req, res, next) => {
   try {
     const query = listAppointmentsSchema.parse(req.query);
     const appointments = await listAppointments(query);
@@ -188,7 +188,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requireStaff, async (req, res, next) => {
   try {
     const appointment = await findAppointmentById({ id: req.params.id });
     if (!appointment) return res.status(404).json({ error: 'Cita no encontrada' });
