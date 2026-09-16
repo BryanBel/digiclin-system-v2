@@ -12,6 +12,7 @@ import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import appointmentsRouter from './src/modules/appointments/appointments.routes.js';
+import healthRouter from './src/modules/health/health.routes.js';
 import usersRepository from './src/modules/users/users.repository.js';
 import appointmentRequestsRouter from './src/modules/appointment_requests/appointment_requests.routes.js';
 
@@ -52,6 +53,7 @@ export const createAndConfigureApp = async () => {
   app.use('/api/medical-history', authenticateUser, medicalHistoryRouter);
   app.use('/api/patients', authenticateUser, patientsRouter);
   app.use('/api/appointments', appointmentsRouter);
+  app.use('/api/health', healthRouter);
 
   app.use((err, req, res, _next) => {
     const sanitizePayload = (payload, depth = 0) => {
