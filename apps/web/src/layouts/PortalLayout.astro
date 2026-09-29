@@ -1,0 +1,66 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { PORTALS, type PortalId } from '@/lib/portals';
+
+interface Props {
+  portal: PortalId;
+  title: string;
+}
+
+const { portal: portalId, title } = Astro.props;
+const portal = PORTALS[portalId];
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<BaseLayout title={`${title} · ${portal.title}`}>
+  <div class="md:grid md:min-h-dvh md:grid-cols-[15rem_1fr]">
+    <aside class="border-b bg-sidebar text-sidebar-foreground md:border-r md:border-b-0">
+      <div class="flex items-center justify-between px-4 py-3 md:block md:py-5">
+        <a href="/" class="font-heading text-lg font-semibold">DigiClin</a>
+        <p class="text-sm text-muted-foreground md:mt-1">{portal.title}</p>
+      </div>
+      <nav aria-label={`Secciones de ${portal.title}`}>
+        <ul class="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible md:pb-4">
+          {
+            portal.nav.map((item) => {
+              const isCurrent = item.href === currentPath;
+              return (
+                <li class="shrink-0">
+                  {item.ready ? (
+                    <a
+                      href={item.href}
+                      aria-current={isCurrent ? 'page' : undefined}
+                      class:list={[
+                        'block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent',
+                        isCurrent && 'bg-sidebar-accent font-medium',
+                      ]}
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <span
+                      aria-disabled="true"
+                      class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                    >
+                      {item.label}
+                      <span class="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] tracking-wide uppercase">
+                        Pronto
+                      </span>
+                    </span>
+                  )}
+                </li>
+              );
+            })
+          }
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="px-4 py-6 md:px-8 md:py-8">
+      <h1 class="font-heading text-2xl font-semibold">{title}</h1>
+      <div class="mt-6">
+        <slot />
+      </div>
+    </main>
+  </div>
+</BaseLayout>

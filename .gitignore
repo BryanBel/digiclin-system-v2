@@ -1,39 +1,27 @@
-# Ignorar carpetas de módulos de Node.js
+# Dependencias
 node_modules/
 
-# Ignorar archivos de entorno con variables secretas y de producción
-.env
-.env.production
-
-apps/frontend/dist
-
-# Ignorar archivos de registro de Node.js
-npm-debug.log*
-yarn-debug.log*
-.npm/
-.yarn/
-
-# Ignorar archivos de compilación de Astro
+# Builds
 dist/
 .astro/
+*.tsbuildinfo
+coverage/
 
-# Ignorar directorios y archivos de VS Code
-.vscode/
+# Variables de entorno: nunca se versionan (la v2 filtro credenciales asi)
+.env
+.env.*
+!.env.example
 
-# Ignorar logs, dumps, etc.
+# Restos locales de la v2 (codigo en el tag v2-final)
+/app/
+
+# Logs y temporales
 *.log
 *.tmp
-*.bak
-*.swp
 
-# Para macOS
-.DS_Store
-
-# Para Windows
-Thumbs.db
-
-# Ignorar archivos específicos de JetBrains
-yarn-error.log*
-pnpm-debug.log*
+# Editores y sistema
+.vscode/*
+!.vscode/extensions.json
 .idea/
-
+.DS_Store
+Thumbs.db

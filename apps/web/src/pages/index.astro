@@ -1,0 +1,53 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { buttonVariants } from '@/components/ui/button';
+
+const entries = [
+  {
+    href: '/paciente',
+    title: 'Soy paciente',
+    text: 'Solicita citas, consulta tu historia clínica, tus récipes y tus exámenes.',
+  },
+  {
+    href: '/medico',
+    title: 'Soy médico',
+    text: 'Tu agenda, la historia de tus pacientes, consultas, récipes y estudios.',
+  },
+  {
+    href: '/admin',
+    title: 'Administración',
+    text: 'Gestión de la clínica: médicos, socios, pacientes, citas y auditoría.',
+  },
+];
+---
+
+<BaseLayout title="Inicio">
+  <main class="mx-auto max-w-5xl px-4 py-12 md:py-20">
+    <p class="font-heading text-lg font-semibold">DigiClin</p>
+    <h1 class="mt-4 max-w-2xl font-heading text-3xl font-semibold md:text-5xl">
+      Una historia clínica por paciente, para cada médico que lo atiende.
+    </h1>
+    <p class="mt-4 max-w-2xl text-muted-foreground">
+      Consultas, diagnósticos, récipes, exámenes e imágenes en un solo lugar, con acceso solo para
+      quien tiene una relación de atención con el paciente.
+    </p>
+
+    <ul class="mt-10 grid gap-4 md:grid-cols-3">
+      {
+        entries.map((entry) => (
+          <li class="flex flex-col rounded-lg border bg-card p-5 text-card-foreground">
+            <h2 class="font-heading text-lg font-semibold">{entry.title}</h2>
+            <p class="mt-2 flex-1 text-sm text-muted-foreground">{entry.text}</p>
+            <a href={entry.href} class:list={[buttonVariants({ size: 'lg' }), 'mt-4 self-start']}>
+              Entrar
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <footer class="mt-16 text-sm text-muted-foreground">
+      <a href="/estado" class="underline-offset-4 hover:underline">Estado del sistema</a>
+    </footer>
+  </main>
+</BaseLayout>
