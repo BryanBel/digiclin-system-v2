@@ -11,8 +11,8 @@ const login = async ({email, password}) => {
   user.set(userData);
 }
 
-const register = async ({ email, password, fullName, role, patientProfile }) => {
-  const payload = { email, password, fullName, role };
+const register = async ({ email, password, fullName, patientProfile }) => {
+  const payload = { email, password, fullName };
   if (patientProfile && Object.keys(patientProfile).length > 0) {
     payload.patientProfile = patientProfile;
   }

@@ -33,23 +33,21 @@ const formatRecipient = ({ email, fullName, role }) => {
 
 authRouter.post('/register', async (req, res) => {
   const parsedPayload = registerUserRouteSchema.body.parse(req.body);
-  const { email, password, fullName, role, patientProfile } = parsedPayload;
+  const { email, password, fullName, patientProfile } = parsedPayload;
 
   const normalizedFullName = fullName?.trim() || null;
-  const normalizedRole = role ?? 'doctor';
-  const normalizedPatientProfile =
-    normalizedRole === 'patient'
-      ? {
-          phone: patientProfile?.phone?.trim() || null,
-          documentId: patientProfile?.documentId?.trim() || null,
-          birthDate: patientProfile?.birthDate ?? null,
-          gender: patientProfile?.gender ?? null,
-          age:
-            typeof patientProfile?.age === 'number' && Number.isFinite(patientProfile.age)
-              ? patientProfile.age
-              : null,
-        }
-      : null;
+  // El registro publico solo crea pacientes; el rol nunca sale del cuerpo de la peticion.
+  const normalizedRole = 'patient';
+  const normalizedPatientProfile = {
+    phone: patientProfile?.phone?.trim() || null,
+    documentId: patientProfile?.documentId?.trim() || null,
+    birthDate: patientProfile?.birthDate ?? null,
+    gender: patientProfile?.gender ?? null,
+    age:
+      typeof patientProfile?.age === 'number' && Number.isFinite(patientProfile.age)
+        ? patientProfile.age
+        : null,
+  };
 
   const userExists = await usersRepository.findByEmail({ email });
   if (userExists) throw new ErrorWithStatus(400, 'User already exists');
@@ -63,18 +61,16 @@ authRouter.post('/register', async (req, res) => {
   });
 
   try {
-    if (normalizedRole === 'patient') {
-      await assignUserToAppointmentRequests({ email, userId: newUser.id });
-      await ensurePatientAndLinkRequestsForEmail({
-        email,
-        fullName: normalizedFullName,
-        phone: normalizedPatientProfile?.phone ?? undefined,
-        documentId: normalizedPatientProfile?.documentId ?? undefined,
-        birthDate: normalizedPatientProfile?.birthDate ?? undefined,
-        gender: normalizedPatientProfile?.gender ?? undefined,
-        age: normalizedPatientProfile?.age ?? undefined,
-      });
-    }
+    await assignUserToAppointmentRequests({ email, userId: newUser.id });
+    await ensurePatientAndLinkRequestsForEmail({
+      email,
+      fullName: normalizedFullName,
+      phone: normalizedPatientProfile.phone ?? undefined,
+      documentId: normalizedPatientProfile.documentId ?? undefined,
+      birthDate: normalizedPatientProfile.birthDate ?? undefined,
+      gender: normalizedPatientProfile.gender ?? undefined,
+      age: normalizedPatientProfile.age ?? undefined,
+    });
   } catch (linkError) {
     console.error('Error linking user with appointment requests:', {
       email,
