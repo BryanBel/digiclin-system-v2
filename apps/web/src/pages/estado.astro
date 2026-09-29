@@ -1,0 +1,43 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { serverApi } from '@/lib/api.server';
+
+// Verifica la cadena completa: web (SSR) -> API -> base de datos.
+let summary: { api: 'up' | 'down'; database: 'up' | 'down' | 'desconocida'; version?: string };
+try {
+  const { data, error } = await serverApi(Astro.request).GET('/api/health');
+  // Un 503 tambien trae cuerpo (en `error`): la API responde pero la base no.
+  const body = data ?? error;
+  summary = { api: 'up', database: body?.database ?? 'desconocida', version: body?.version };
+} catch {
+  // La API no responde (proceso caido o URL interna mal configurada).
+  summary = { api: 'down', database: 'desconocida' };
+}
+
+const label = { up: 'Operativa', down: 'Sin respuesta', desconocida: 'Desconocida' } as const;
+---
+
+<BaseLayout title="Estado del sistema">
+  <main class="mx-auto max-w-xl px-4 py-12">
+    <h1 class="font-heading text-2xl font-semibold">Estado del sistema</h1>
+    <dl class="mt-6 divide-y rounded-lg border">
+      <div class="flex justify-between px-4 py-3">
+        <dt>API</dt>
+        <dd>{label[summary.api]}</dd>
+      </div>
+      <div class="flex justify-between px-4 py-3">
+        <dt>Base de datos</dt>
+        <dd>{label[summary.database]}</dd>
+      </div>
+      {
+        summary.version && (
+          <div class="flex justify-between px-4 py-3">
+            <dt>Versión de la API</dt>
+            <dd>{summary.version}</dd>
+          </div>
+        )
+      }
+    </dl>
+    <a href="/" class="mt-6 inline-block text-sm underline-offset-4 hover:underline">Volver</a>
+  </main>
+</BaseLayout>

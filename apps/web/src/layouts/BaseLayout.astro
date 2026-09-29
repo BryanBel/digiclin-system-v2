@@ -1,0 +1,30 @@
+---
+import '@/styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'DigiClin: gestor clínico con historia clínica única por paciente.' } =
+  Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} · DigiClin</title>
+    <script is:inline>
+      // Tema antes del primer pintado: sigue la preferencia del sistema, sin parpadeo.
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+  </head>
+  <body class="min-h-dvh antialiased">
+    <slot />
+  </body>
+</html>

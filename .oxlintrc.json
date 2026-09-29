@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "react"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "eqeqeq": "error",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "typescript/no-extraneous-class": ["warn", { "allowWithDecorator": true }],
+    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css", "reflect-metadata"] }],
+    "import/no-named-as-default-member": "off"
+  },
+  "ignorePatterns": ["**/dist/**", "**/.astro/**", "app/**", "**/api-schema.d.ts"]
+}

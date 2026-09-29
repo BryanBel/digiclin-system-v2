@@ -1,0 +1,13 @@
+---
+interface Props {
+  phase: number;
+  what: string;
+}
+
+const { phase, what } = Astro.props;
+---
+
+<section class="max-w-prose rounded-lg border bg-card p-5 text-card-foreground">
+  <p class="text-sm font-medium text-muted-foreground">En construcción · fase {phase}</p>
+  <p class="mt-2">{what}</p>
+</section>
