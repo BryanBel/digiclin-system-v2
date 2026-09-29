@@ -11,7 +11,7 @@ import { describeDatabaseUrl, shadowedEnvKeys } from './config/env-source.js';
 import { mountWeb } from './web.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   const logger = new Logger('Bootstrap');
 

@@ -20,6 +20,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MeController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practitioners/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PractitionersController_getOwn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practitioners/me/application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PractitionersController_submit"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clinic/practitioners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicPractitionersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clinic/practitioners/{userId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicPractitionersController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clinic/practitioners/{userId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicPractitionersController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -68,6 +164,227 @@ export interface operations {
                         version: string;
                     };
                 };
+            };
+        };
+    };
+    MeController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: email */
+                            email: string;
+                            emailVerified: boolean;
+                            twoFactorEnabled: boolean;
+                        };
+                        clinic: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            roles: ("owner" | "admin" | "doctor")[];
+                        } | null;
+                        practitioner: {
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected" | "suspended";
+                        } | null;
+                        access: {
+                            admin: boolean;
+                            doctor: boolean;
+                            /** @enum {boolean} */
+                            patient: true;
+                        };
+                        twoFactorRequired: boolean;
+                    };
+                };
+            };
+        };
+    };
+    PractitionersController_getOwn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        userId: string;
+                        /** Format: uuid */
+                        clinicId: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "suspended";
+                        specialties: string[];
+                        qualifications: {
+                            type: string;
+                            number: string;
+                            issuer?: string;
+                            country: string;
+                        }[];
+                        reviewNote: string | null;
+                        /** Format: date-time */
+                        reviewedAt: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                    };
+                };
+            };
+        };
+    };
+    PractitionersController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    specialties: string[];
+                    qualifications: {
+                        type: string;
+                        number: string;
+                        issuer?: string;
+                        country?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        userId: string;
+                        /** Format: uuid */
+                        clinicId: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "suspended";
+                        specialties: string[];
+                        qualifications: {
+                            type: string;
+                            number: string;
+                            issuer?: string;
+                            country: string;
+                        }[];
+                        reviewNote: string | null;
+                        /** Format: date-time */
+                        reviewedAt: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                    };
+                };
+            };
+        };
+    };
+    ClinicPractitionersController_list: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "suspended";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        userId: string;
+                        /** Format: uuid */
+                        clinicId: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "suspended";
+                        specialties: string[];
+                        qualifications: {
+                            type: string;
+                            number: string;
+                            issuer?: string;
+                            country: string;
+                        }[];
+                        reviewNote: string | null;
+                        /** Format: date-time */
+                        reviewedAt: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        name: string;
+                        /** Format: email */
+                        email: string;
+                    }[];
+                };
+            };
+        };
+    };
+    ClinicPractitionersController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicPractitionersController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

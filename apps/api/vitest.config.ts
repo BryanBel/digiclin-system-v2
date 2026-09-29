@@ -8,6 +8,9 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       DATABASE_URL: 'postgres://tests-use-pglite@localhost/unused',
+      BETTER_AUTH_SECRET: 'test-secret-que-solo-existe-en-los-tests-0123456789',
+      PUBLIC_URL: 'http://localhost:4321',
+      MAIL_PROVIDER: 'console',
     },
   },
 });
