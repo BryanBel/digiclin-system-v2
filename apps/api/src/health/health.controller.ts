@@ -4,10 +4,12 @@ import { healthResponse, type HealthResponse } from '@digiclin/shared';
 import { sql } from 'drizzle-orm';
 import type { Response } from 'express';
 import { toOpenApi } from '../common/zod.js';
+import { Public } from '../auth/decorators.js';
 import { DB, type Database } from '../db/database.module.js';
 import { API_VERSION } from '../version.js';
 
 @ApiTags('health')
+@Public()
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);

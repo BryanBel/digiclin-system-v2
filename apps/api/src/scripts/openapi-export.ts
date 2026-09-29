@@ -8,12 +8,13 @@ import path from 'node:path';
  * No necesita base de datos: el pool de pg no conecta hasta la primera consulta.
  */
 process.env.DATABASE_URL ??= 'postgres://openapi-export@localhost/unused';
+process.env.BETTER_AUTH_SECRET ??= 'openapi-export-no-firma-nada-0123456789abcdef';
 
 const { NestFactory } = await import('@nestjs/core');
 const { AppModule } = await import('../app.module.js');
 const { buildOpenApiDocument, configureApp } = await import('../app.setup.js');
 
-const app = await NestFactory.create(AppModule, { logger: false });
+const app = await NestFactory.create(AppModule, { logger: false, bodyParser: false });
 configureApp(app);
 const document = buildOpenApiDocument(app);
 await app.close();
