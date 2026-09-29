@@ -37,13 +37,11 @@ export const registerUserRouteSchema = {
       fullName: z.string().min(1, 'El nombre es obligatorio').optional(),
       email: z.string().email(),
       password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-      role: z.enum(['doctor', 'patient', 'admin']).optional(),
+      // Sin campo role: el registro publico crea siempre pacientes. Zod descarta cualquier
+      // role que mande el cliente. Doctores y admins se crean desde seed.js.
       patientProfile: patientProfileSchema.optional(),
     })
     .superRefine((data, ctx) => {
-      const role = data.role ?? 'doctor';
-      if (role !== 'patient') return;
-
       const profile = data.patientProfile ?? {};
 
       if (!profile.phone) {
