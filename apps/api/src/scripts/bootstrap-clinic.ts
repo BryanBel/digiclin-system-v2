@@ -4,13 +4,16 @@ import { parseArgs } from 'node:util';
 /**
  * Crea la clinica y su dueno en la base de DATABASE_URL.
  *
- *   pnpm --filter @digiclin/api bootstrap:clinic -- \
+ *   pnpm --filter @digiclin/api bootstrap:clinic \
  *     --clinic "Clínica Ejemplo" --slug clinica-ejemplo \
  *     --owner-name "Nombre Apellido" --owner-email dueno@example.com
  *
  * Con MAIL_PROVIDER=console el enlace para elegir contrasena sale en esta misma consola.
  */
+// Si se escribe "--" antes de los argumentos, pnpm lo pasa literal: se descarta.
+const argv = process.argv.slice(2);
 const { values } = parseArgs({
+  args: argv[0] === '--' ? argv.slice(1) : argv,
   options: {
     clinic: { type: 'string' },
     slug: { type: 'string' },
