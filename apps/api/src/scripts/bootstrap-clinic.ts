@@ -56,11 +56,11 @@ try {
     resetPasswordUrl: `${config.get('PUBLIC_URL')}/restablecer`,
   });
 
-  console.log(`Clinica creada: ${result.clinic.name} (${result.clinic.id})`);
+  console.log(`Clínica creada: ${result.clinic.name} (${result.clinic.id})`);
   console.log(
     result.ownerCreated
-      ? `Dueno creado. Se envio a ${values['owner-email']} un enlace para elegir su contrasena.`
-      : `La cuenta ${values['owner-email']} ya existia: ahora es duena de la clinica.`,
+      ? `Cuenta del dueño creada. Se envió a ${values['owner-email']} un enlace para elegir la contraseña.`
+      : `La cuenta ${values['owner-email']} ya existía: ahora tiene la titularidad de la clínica.`,
   );
   // Da tiempo a que salga el correo (se envia en segundo plano).
   await new Promise((resolve) => setTimeout(resolve, 1500));
