@@ -1,0 +1,91 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { SignOutButton } from '@/components/auth/SignOutButton';
+import { FormAlert } from '@/components/forms/form';
+import { buttonVariants } from '@/components/ui/button';
+
+const me = Astro.locals.me!;
+
+const doctorLabel = {
+  none: 'Solicitar acceso como médico',
+  pending: 'Solicitud en revisión',
+  approved: 'Entrar al portal médico',
+  rejected: 'Solicitud rechazada: ver motivo',
+  suspended: 'Acceso suspendido',
+}[me.practitioner?.status ?? 'none'];
+
+const entries = [
+  {
+    href: '/paciente',
+    title: 'Paciente',
+    text: 'Tus citas, tu historia clínica, tus récipes y tus exámenes.',
+    cta: 'Entrar como paciente',
+  },
+  {
+    href: '/medico',
+    title: 'Médico',
+    text: 'Agenda, historias de tus pacientes, consultas y récipes.',
+    cta: doctorLabel,
+  },
+  ...(me.access.admin
+    ? [
+        {
+          href: '/admin',
+          title: 'Administración',
+          text: `Gestión de ${me.clinic?.name ?? 'la clínica'}: médicos, socios y más.`,
+          cta: 'Entrar a la administración',
+        },
+      ]
+    : []),
+];
+---
+
+<BaseLayout title="Mi cuenta">
+  <main class="mx-auto max-w-4xl px-4 py-8 md:py-12">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <a href="/" class="font-heading text-lg font-semibold">DigiClin</a>
+      <SignOutButton client:idle />
+    </div>
+
+    <h1 class="mt-8 font-heading text-2xl font-semibold">Hola, {me.user.name}</h1>
+    <p class="mt-1 text-muted-foreground">{me.user.email}</p>
+
+    {
+      me.twoFactorRequired && (
+        <div class="mt-6">
+          <FormAlert>
+            {me.clinic?.name ?? 'La clínica'} exige verificación en dos pasos al personal.{' '}
+            <a href="/cuenta/seguridad" class="font-medium underline">
+              Actívala para continuar
+            </a>
+            .
+          </FormAlert>
+        </div>
+      )
+    }
+
+    <ul class="mt-8 grid gap-4 md:grid-cols-3">
+      {
+        entries.map((entry) => (
+          <li class="flex flex-col rounded-lg border bg-card p-5 text-card-foreground">
+            <h2 class="font-heading text-lg font-semibold">{entry.title}</h2>
+            <p class="mt-2 flex-1 text-sm text-muted-foreground">{entry.text}</p>
+            <a href={entry.href} class:list={[buttonVariants({ size: 'lg' }), 'mt-4 self-start']}>
+              {entry.cta}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <section class="mt-10 rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Seguridad</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Verificación en dos pasos: {me.user.twoFactorEnabled ? 'activada' : 'desactivada'}.
+      </p>
+      <a href="/cuenta/seguridad" class:list={[buttonVariants({ variant: 'outline' }), 'mt-4']}>
+        Contraseña y verificación en dos pasos
+      </a>
+    </section>
+  </main>
+</BaseLayout>

@@ -7,10 +7,27 @@
   },
   "rules": {
     "eqeqeq": "error",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "typescript/no-extraneous-class": ["warn", { "allowWithDecorator": true }],
-    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css", "reflect-metadata"] }],
-    "import/no-named-as-default-member": "off"
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-extraneous-class": [
+      "warn",
+      {
+        "allowWithDecorator": true
+      }
+    ],
+    "import/no-unassigned-import": [
+      "warn",
+      {
+        "allow": ["**/*.css", "reflect-metadata"]
+      }
+    ],
+    "import/no-named-as-default-member": "off",
+    "react/react-in-jsx-scope": "off"
   },
   "ignorePatterns": ["**/dist/**", "**/.astro/**", "app/**", "**/api-schema.d.ts"]
 }

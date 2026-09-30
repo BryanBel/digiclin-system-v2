@@ -1,0 +1,20 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { safeNext, withNext } from '@/lib/safe-next';
+
+const next = safeNext(Astro.url.searchParams.get('next'));
+---
+
+<AuthLayout title="Entrar" subtitle="Una sola cuenta para pacientes, médicos y administración.">
+  <LoginForm client:load next={next} />
+  <p slot="footer" class="mt-6 text-sm text-muted-foreground">
+    ¿No tienes cuenta?
+    <a
+      href={withNext('/registro', next)}
+      class="font-medium text-foreground underline-offset-4 hover:underline"
+    >
+      Crear una cuenta
+    </a>
+  </p>
+</AuthLayout>

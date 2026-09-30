@@ -1,0 +1,13 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { buttonVariants } from '@/components/ui/button';
+
+Astro.response.status = 403;
+---
+
+<AuthLayout
+  title="No tienes acceso a esta sección"
+  subtitle="Tu cuenta no tiene los permisos que pide esta página."
+>
+  <a href="/cuenta" class={buttonVariants({ size: 'lg' })}>Ir a mi cuenta</a>
+</AuthLayout>

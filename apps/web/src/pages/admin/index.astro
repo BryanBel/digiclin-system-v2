@@ -1,11 +1,32 @@
 ---
 import PortalLayout from '@/layouts/PortalLayout.astro';
-import UnderConstruction from '@/components/UnderConstruction.astro';
+import { buttonVariants } from '@/components/ui/button';
+import { serverApi } from '@/lib/api.server';
+
+const me = Astro.locals.me!;
+const { data: pending = [] } = await serverApi(Astro.request).GET('/api/clinic/practitioners', {
+  params: { query: { status: 'pending' } },
+});
 ---
 
-<PortalLayout portal="admin" title="Resumen">
-  <UnderConstruction
-    phase={2}
-    what="Acceso para el dueño y los socios de la clínica: aprobación e invitación de médicos, invitación de socios y datos de la clínica."
-  />
+<PortalLayout portal="admin" title={me.clinic?.name ?? 'Administración'}>
+  <ul class="grid max-w-3xl gap-4 md:grid-cols-2">
+    <li class="rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Solicitudes de médicos</h2>
+      <p class="mt-1 text-3xl font-semibold">{pending.length}</p>
+      <p class="text-sm text-muted-foreground">pendientes de revisión</p>
+      <a href="/admin/medicos" class:list={[buttonVariants({ variant: 'outline' }), 'mt-4']}
+        >Revisar</a
+      >
+    </li>
+    <li class="rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Equipo directivo</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        {me.clinic?.roles.includes('owner') ? 'Invita a tus socios.' : 'Socios de la clínica.'}
+      </p>
+      <a href="/admin/socios" class:list={[buttonVariants({ variant: 'outline' }), 'mt-4']}
+        >Ver socios</a
+      >
+    </li>
+  </ul>
 </PortalLayout>

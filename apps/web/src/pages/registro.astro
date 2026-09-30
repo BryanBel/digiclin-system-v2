@@ -1,0 +1,26 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { SignUpForm } from '@/components/auth/SignUpForm';
+import { safeNext, withNext } from '@/lib/safe-next';
+
+const next = safeNext(Astro.url.searchParams.get('next'));
+const isDoctor = next === '/medico';
+---
+
+<AuthLayout
+  title="Crear cuenta"
+  subtitle={isDoctor
+    ? 'Primero tu cuenta. Después envías tus datos profesionales para que la clínica te apruebe.'
+    : 'Con tu cuenta puedes pedir citas y consultar tu historia clínica.'}
+>
+  <SignUpForm client:load next={next} />
+  <p slot="footer" class="mt-6 text-sm text-muted-foreground">
+    ¿Ya tienes cuenta?
+    <a
+      href={withNext('/ingresar', next)}
+      class="font-medium text-foreground underline-offset-4 hover:underline"
+    >
+      Entrar
+    </a>
+  </p>
+</AuthLayout>

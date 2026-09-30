@@ -1,0 +1,39 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { InvitationPanel } from '@/components/clinic/InvitationPanel';
+import { buttonVariants } from '@/components/ui/button';
+import { serverApi } from '@/lib/api.server';
+import { withNext } from '@/lib/safe-next';
+
+const id = Astro.params.id!;
+const here = `/invitacion/${encodeURIComponent(id)}`;
+// Sin sesion: primero entrar o crear la cuenta con el correo invitado, y volver aqui.
+const { response } = await serverApi(Astro.request).GET('/api/me');
+const signedIn = response.ok;
+---
+
+<AuthLayout title="Invitación a una clínica">
+  {
+    signedIn ? (
+      <InvitationPanel client:load id={id} />
+    ) : (
+      <div class="grid gap-4">
+        <p>
+          Para responder, entra o crea tu cuenta con el mismo correo en el que recibiste la
+          invitación.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <a href={withNext('/ingresar', here)} class={buttonVariants({ size: 'lg' })}>
+            Entrar
+          </a>
+          <a
+            href={withNext('/registro', here)}
+            class={buttonVariants({ size: 'lg', variant: 'outline' })}
+          >
+            Crear cuenta
+          </a>
+        </div>
+      </div>
+    )
+  }
+</AuthLayout>

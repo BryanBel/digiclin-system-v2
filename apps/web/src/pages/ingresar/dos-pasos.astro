@@ -1,0 +1,14 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { TwoFactorForm } from '@/components/auth/TwoFactorForm';
+import { safeNext } from '@/lib/safe-next';
+
+const next = safeNext(Astro.url.searchParams.get('next'));
+---
+
+<AuthLayout
+  title="Verificación en dos pasos"
+  subtitle="Escribe el código de tu aplicación de autenticación."
+>
+  <TwoFactorForm client:load next={next} />
+</AuthLayout>

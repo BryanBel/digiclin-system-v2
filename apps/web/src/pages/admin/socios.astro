@@ -1,0 +1,37 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { InviteForm } from '@/components/clinic/InviteForm';
+import { TeamPanel } from '@/components/clinic/TeamPanel';
+
+const me = Astro.locals.me!;
+const isOwner = me.clinic?.roles.includes('owner') ?? false;
+---
+
+<PortalLayout portal="admin" title="Socios">
+  <div class="grid max-w-4xl gap-4 md:grid-cols-2">
+    <div class="rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Invitar a un socio</h2>
+      {
+        isOwner ? (
+          <>
+            <p class="mt-1 mb-4 text-sm text-muted-foreground">
+              Un socio administra la clínica e invita médicos. No accede al contenido de las
+              historias clínicas.
+            </p>
+            <InviteForm client:visible role="admin" cta="Enviar invitación" />
+          </>
+        ) : (
+          <p class="mt-2 text-sm text-muted-foreground">
+            Solo el dueño de la clínica invita socios.
+          </p>
+        )
+      }
+    </div>
+    <div class="rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Equipo directivo</h2>
+      <div class="mt-4">
+        <TeamPanel client:visible roles={['owner', 'admin']} />
+      </div>
+    </div>
+  </div>
+</PortalLayout>

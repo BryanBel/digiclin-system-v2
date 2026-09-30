@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 import { PORTALS, type PortalId } from '@/lib/portals';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 const { portal: portalId, title } = Astro.props;
 const portal = PORTALS[portalId];
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const { me } = Astro.locals;
 ---
 
 <BaseLayout title={`${title} · ${portal.title}`}>
@@ -56,11 +58,20 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
       </nav>
     </aside>
 
-    <main class="px-4 py-6 md:px-8 md:py-8">
-      <h1 class="font-heading text-2xl font-semibold">{title}</h1>
-      <div class="mt-6">
-        <slot />
-      </div>
-    </main>
+    <div>
+      <header class="flex flex-wrap items-center justify-end gap-3 border-b px-4 py-3 md:px-8">
+        {me && <span class="text-sm text-muted-foreground">{me.user.name}</span>}
+        <a href="/cuenta" class="text-sm font-medium underline-offset-4 hover:underline"
+          >Mi cuenta</a
+        >
+        <SignOutButton client:idle />
+      </header>
+      <main class="px-4 py-6 md:px-8 md:py-8">
+        <h1 class="font-heading text-2xl font-semibold">{title}</h1>
+        <div class="mt-6">
+          <slot />
+        </div>
+      </main>
+    </div>
   </div>
 </BaseLayout>

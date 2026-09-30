@@ -69,6 +69,22 @@ describe('identidad y acceso', () => {
       });
     });
 
+    it('registrarse con un correo existente no lo revela, pero avisa al dueno del correo', async () => {
+      await t.signUp('Ana', 'ana@example.com');
+      const newcomer = await t
+        .browser()
+        .post('/api/auth/sign-up/email', {
+          name: 'Otra persona',
+          email: 'ana@example.com',
+          password: 'otra-contrasena-larga-123',
+        })
+        .expect(200);
+
+      expect(newcomer.body.token).toBeNull();
+      const notice = t.mailer.last('ana@example.com', /Intento de registro/);
+      expect(notice.text).toContain(`${ORIGIN}/recuperar`);
+    });
+
     it('rechaza contrasenas de menos de 12 caracteres', async () => {
       const res = await t.browser().post('/api/auth/sign-up/email', {
         name: 'Ana',

@@ -84,6 +84,18 @@ export function createAuth({ db, config, mailer }: AuthDeps) {
       resetPasswordTokenExpiresIn: HOUR,
       sendResetPassword: async ({ user, url }) =>
         sendInBackground(mailTemplates.resetPassword({ email: user.email, name: user.name }, url)),
+      // El registro con un correo existente responde igual que uno nuevo (no revela quien es
+      // paciente de la clinica); el aviso le llega solo al dueno real del correo.
+      onExistingUserSignUp: async ({ user }) =>
+        sendInBackground(
+          mailTemplates.existingAccount(
+            { email: user.email, name: user.name },
+            {
+              signIn: `${config.PUBLIC_URL}/ingresar`,
+              reset: `${config.PUBLIC_URL}/recuperar`,
+            },
+          ),
+        ),
     },
     emailVerification: {
       sendOnSignUp: true,
@@ -181,7 +193,8 @@ export function createAuth({ db, config, mailer }: AuthDeps) {
           },
         },
       }),
-      twoFactor({ issuer: 'DigiClin' }),
+      // La web dice "confiar en este dispositivo por 30 dias": se fija aqui, no por defecto.
+      twoFactor({ issuer: 'DigiClin', trustDeviceMaxAge: 30 * 24 * HOUR }),
       haveIBeenPwned({
         enabled: !isTest,
         customPasswordCompromisedMessage:
