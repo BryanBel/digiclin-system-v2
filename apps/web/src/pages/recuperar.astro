@@ -1,0 +1,11 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { ForgotPasswordForm } from '@/components/auth/PasswordRecovery';
+---
+
+<AuthLayout title="Recuperar contraseña" subtitle="Te enviamos un enlace para elegir una nueva.">
+  <ForgotPasswordForm client:load />
+  <p slot="footer" class="mt-6 text-sm">
+    <a href="/ingresar" class="underline-offset-4 hover:underline">Volver a entrar</a>
+  </p>
+</AuthLayout>

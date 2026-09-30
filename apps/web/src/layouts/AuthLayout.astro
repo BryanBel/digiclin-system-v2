@@ -1,0 +1,22 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <main class="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+    <a href="/" class="font-heading text-lg font-semibold">DigiClin</a>
+    <h1 class="mt-6 font-heading text-2xl font-semibold">{title}</h1>
+    {subtitle && <p class="mt-2 text-muted-foreground">{subtitle}</p>}
+    <div class="mt-6">
+      <slot />
+    </div>
+    <slot name="footer" />
+  </main>
+</BaseLayout>

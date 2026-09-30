@@ -1,11 +1,100 @@
 ---
 import PortalLayout from '@/layouts/PortalLayout.astro';
+import ProfileSummary from '@/components/practitioner/ProfileSummary.astro';
 import UnderConstruction from '@/components/UnderConstruction.astro';
+import { ApplicationForm } from '@/components/practitioner/ApplicationForm';
+import { FormAlert } from '@/components/forms/form';
+import { serverApi } from '@/lib/api.server';
+
+const me = Astro.locals.me!;
+const { data: profile } = await serverApi(Astro.request).GET('/api/practitioners/me');
+const status = profile?.status ?? 'none';
 ---
 
-<PortalLayout portal="medico" title="Agenda">
-  <UnderConstruction
-    phase={2}
-    what="Registro del médico (queda pendiente de aprobación por la clínica) e ingreso con verificación en dos pasos."
-  />
+<PortalLayout portal="medico" title="Portal médico">
+  <div class="grid max-w-3xl gap-6">
+    {
+      status === 'none' && (
+        <>
+          <p>
+            Para atender en {me.clinic?.name ?? 'la clínica'} envía tus datos profesionales. La
+            administración los revisa y te avisa por correo.
+          </p>
+          <ApplicationForm client:load />
+        </>
+      )
+    }
+
+    {
+      status === 'pending' && profile && (
+        <>
+          <FormAlert tone="ok">
+            Tu solicitud está en revisión. Te avisaremos por correo cuando la clínica responda.
+          </FormAlert>
+          <section class="rounded-lg border p-5">
+            <h2 class="font-heading text-lg font-semibold">Datos enviados</h2>
+            <div class="mt-4">
+              <ProfileSummary profile={profile} />
+            </div>
+          </section>
+        </>
+      )
+    }
+
+    {
+      status === 'rejected' && profile && (
+        <>
+          <FormAlert>
+            La clínica no aprobó tu solicitud. Motivo: {profile.reviewNote ?? 'sin motivo indicado'}
+          </FormAlert>
+          <p>Corrige tus datos y vuelve a enviarla:</p>
+          <ApplicationForm client:load initial={profile} />
+        </>
+      )
+    }
+
+    {
+      status === 'suspended' && (
+        <FormAlert>
+          Tu acceso como médico está suspendido. Comunícate con la administración de la clínica.
+        </FormAlert>
+      )
+    }
+
+    {
+      status === 'approved' && profile && (
+        <>
+          {me.access.doctor ? (
+            <FormAlert tone="ok">
+              Tu acceso como médico de {me.clinic?.name} está aprobado.
+            </FormAlert>
+          ) : (
+            <FormAlert>
+              Tu perfil está aprobado pero no figuras en la clínica. Comunícate con la
+              administración.
+            </FormAlert>
+          )}
+          {!me.user.twoFactorEnabled && (
+            <FormAlert>
+              Vas a trabajar con historias clínicas: activa la{' '}
+              <a href="/cuenta/seguridad" class="font-medium underline">
+                verificación en dos pasos
+              </a>
+              .
+            </FormAlert>
+          )}
+          <section class="rounded-lg border p-5">
+            <h2 class="font-heading text-lg font-semibold">Tu perfil profesional</h2>
+            <div class="mt-4">
+              <ProfileSummary profile={profile} />
+            </div>
+          </section>
+          <UnderConstruction
+            phase={3}
+            what="Agenda, historias clínicas de tus pacientes, consultas y récipes."
+          />
+        </>
+      )
+    }
+  </div>
 </PortalLayout>

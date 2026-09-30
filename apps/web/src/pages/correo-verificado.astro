@@ -1,0 +1,24 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { ResendVerificationForm } from '@/components/auth/PasswordRecovery';
+import { buttonVariants } from '@/components/ui/button';
+import { safeNext, withNext } from '@/lib/safe-next';
+
+// Better Auth vuelve aqui tras el enlace del correo; con ?error= si vencio o ya se uso.
+const next = safeNext(Astro.url.searchParams.get('next'));
+const failed = Astro.url.searchParams.has('error');
+---
+
+{
+  failed ? (
+    <AuthLayout title="El enlace no funcionó" subtitle="Venció o ya se usó. Te enviamos uno nuevo.">
+      <ResendVerificationForm client:load callbackURL={withNext('/correo-verificado', next)} />
+    </AuthLayout>
+  ) : (
+    <AuthLayout title="Correo confirmado" subtitle="Tu cuenta está activa y ya iniciaste sesión.">
+      <a href={next ?? '/cuenta'} class={buttonVariants({ size: 'lg' })}>
+        Continuar
+      </a>
+    </AuthLayout>
+  )
+}

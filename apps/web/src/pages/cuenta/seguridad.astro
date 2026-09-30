@@ -1,0 +1,40 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { ChangePasswordForm } from '@/components/account/ChangePasswordForm';
+import { TwoFactorSettings } from '@/components/account/TwoFactorSettings';
+import { FormAlert } from '@/components/forms/form';
+
+const me = Astro.locals.me!;
+const required = Astro.url.searchParams.has('requerido') || me.twoFactorRequired;
+---
+
+<BaseLayout title="Seguridad de la cuenta">
+  <main class="mx-auto max-w-xl px-4 py-8 md:py-12">
+    <a href="/cuenta" class="text-sm underline-offset-4 hover:underline">← Mi cuenta</a>
+    <h1 class="mt-4 font-heading text-2xl font-semibold">Seguridad de la cuenta</h1>
+
+    {
+      required && !me.user.twoFactorEnabled && (
+        <div class="mt-6">
+          <FormAlert>
+            La clínica exige verificación en dos pasos para entrar a los portales del personal.
+          </FormAlert>
+        </div>
+      )
+    }
+
+    <section class="mt-8 rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Verificación en dos pasos</h2>
+      <div class="mt-4">
+        <TwoFactorSettings client:load enabled={me.user.twoFactorEnabled} />
+      </div>
+    </section>
+
+    <section class="mt-8 rounded-lg border p-5">
+      <h2 class="font-heading text-lg font-semibold">Cambiar contraseña</h2>
+      <div class="mt-4">
+        <ChangePasswordForm client:load />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

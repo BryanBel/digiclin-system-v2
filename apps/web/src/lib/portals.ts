@@ -20,8 +20,8 @@ export const PORTALS: Record<PortalId, Portal> = {
     title: 'Administración',
     nav: [
       { label: 'Resumen', href: '/admin', ready: true },
-      { label: 'Médicos', href: '/admin/medicos', ready: false },
-      { label: 'Socios', href: '/admin/socios', ready: false },
+      { label: 'Médicos', href: '/admin/medicos', ready: true },
+      { label: 'Socios', href: '/admin/socios', ready: true },
       { label: 'Pacientes', href: '/admin/pacientes', ready: false },
       { label: 'Citas', href: '/admin/citas', ready: false },
       { label: 'Auditoría', href: '/admin/auditoria', ready: false },
@@ -32,9 +32,9 @@ export const PORTALS: Record<PortalId, Portal> = {
     id: 'medico',
     title: 'Médico',
     nav: [
-      { label: 'Agenda', href: '/medico', ready: true },
+      { label: 'Inicio', href: '/medico', ready: true },
+      { label: 'Agenda', href: '/medico/agenda', ready: false },
       { label: 'Mis pacientes', href: '/medico/pacientes', ready: false },
-      { label: 'Perfil profesional', href: '/medico/perfil', ready: false },
     ],
   },
   paciente: {
@@ -46,7 +46,6 @@ export const PORTALS: Record<PortalId, Portal> = {
       { label: 'Mi historia', href: '/paciente/historia', ready: false },
       { label: 'Mis récipes', href: '/paciente/recipes', ready: false },
       { label: 'Mis exámenes', href: '/paciente/examenes', ready: false },
-      { label: 'Mi perfil', href: '/paciente/perfil', ready: false },
     ],
   },
 };

@@ -1,0 +1,92 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import ProfileSummary from '@/components/practitioner/ProfileSummary.astro';
+import { InviteForm } from '@/components/clinic/InviteForm';
+import { PractitionerReview } from '@/components/clinic/PractitionerReview';
+import { TeamPanel } from '@/components/clinic/TeamPanel';
+import { Badge } from '@/components/ui/badge';
+import { serverApi } from '@/lib/api.server';
+
+const { data: all = [] } = await serverApi(Astro.request).GET('/api/clinic/practitioners');
+const pending = all.filter((p) => p.status === 'pending');
+const reviewed = all.filter((p) => p.status !== 'pending');
+
+const STATUS = {
+  approved: 'Aprobado',
+  rejected: 'Rechazado',
+  suspended: 'Suspendido',
+  pending: 'Pendiente',
+};
+const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
+---
+
+<PortalLayout portal="admin" title="Médicos">
+  <div class="grid max-w-4xl gap-10">
+    <section>
+      <h2 class="font-heading text-lg font-semibold">Solicitudes pendientes</h2>
+      {
+        pending.length === 0 ? (
+          <p class="mt-2 text-sm text-muted-foreground">No hay solicitudes por revisar.</p>
+        ) : (
+          <ul class="mt-4 grid gap-4">
+            {pending.map((p) => (
+              <li class="grid gap-4 rounded-lg border p-5">
+                <div>
+                  <p class="font-medium">{p.name}</p>
+                  <p class="text-sm text-muted-foreground">
+                    {p.email} · enviada el {dateFormat.format(new Date(p.createdAt))}
+                  </p>
+                </div>
+                <ProfileSummary profile={p} />
+                <p class="text-sm text-muted-foreground">
+                  Verifica los registros en las fuentes oficiales antes de aprobar.
+                </p>
+                <PractitionerReview client:visible userId={p.userId} name={p.name} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+
+    <section class="grid gap-4 md:grid-cols-2">
+      <div class="rounded-lg border p-5">
+        <h2 class="font-heading text-lg font-semibold">Invitar a un médico</h2>
+        <p class="mt-1 mb-4 text-sm text-muted-foreground">
+          Un médico invitado queda aprobado al aceptar: la clínica responde por él.
+        </p>
+        <InviteForm client:visible role="doctor" cta="Enviar invitación" />
+      </div>
+      <div class="rounded-lg border p-5">
+        <h2 class="font-heading text-lg font-semibold">Equipo médico</h2>
+        <div class="mt-4">
+          <TeamPanel client:visible roles={['doctor']} />
+        </div>
+      </div>
+    </section>
+
+    {
+      reviewed.length > 0 && (
+        <section>
+          <h2 class="font-heading text-lg font-semibold">Solicitudes revisadas</h2>
+          <ul class="mt-4 divide-y rounded-lg border">
+            {reviewed.map((p) => (
+              <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <div>
+                  <p class="font-medium">{p.name}</p>
+                  <p class="text-sm text-muted-foreground">
+                    {p.specialties.join(', ')}
+                    {p.status === 'rejected' && p.reviewNote && ` · Motivo: ${p.reviewNote}`}
+                  </p>
+                </div>
+                <Badge variant={p.status === 'approved' ? 'secondary' : 'outline'}>
+                  {STATUS[p.status]}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </div>
+</PortalLayout>

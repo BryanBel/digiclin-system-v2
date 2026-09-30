@@ -1,0 +1,26 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import { ResetPasswordForm } from '@/components/auth/PasswordRecovery';
+import { FormAlert } from '@/components/forms/form';
+
+// El enlace del correo pasa por Better Auth, que redirige aqui con ?token= o con ?error=.
+const token = Astro.url.searchParams.get('token');
+const failed = Astro.url.searchParams.has('error') || !token;
+---
+
+<AuthLayout title="Elige una contraseña nueva">
+  {
+    failed ? (
+      <div class="grid gap-4">
+        <FormAlert>
+          El enlace no es válido o venció. Los enlaces duran 1 hora y sirven una vez.
+        </FormAlert>
+        <a href="/recuperar" class="font-medium underline-offset-4 hover:underline">
+          Pedir un enlace nuevo
+        </a>
+      </div>
+    ) : (
+      <ResetPasswordForm client:load token={token!} />
+    )
+  }
+</AuthLayout>

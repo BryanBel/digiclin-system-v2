@@ -79,6 +79,16 @@ export const mailTemplates = {
       { label: 'Confirmar correo', url },
     ),
 
+  /** Alguien intento registrarse con un correo que ya tiene cuenta (la web no lo revela). */
+  existingAccount: (to: Recipient, urls: { signIn: string; reset: string }) =>
+    message(to, 'Intento de registro con tu correo en DigiClin', [
+      greeting(to.name),
+      p`Alguien intentó crear una cuenta nueva con este correo, pero ya tienes una.`,
+      p`Si fuiste tú, entra con tu contraseña: ${urls.signIn}`,
+      p`Si no la recuerdas, puedes elegir una nueva: ${urls.reset}`,
+      p`Si no fuiste tú, ignora este correo: nadie tuvo acceso a tu cuenta.`,
+    ]),
+
   resetPassword: (to: Recipient, url: string) =>
     message(
       to,

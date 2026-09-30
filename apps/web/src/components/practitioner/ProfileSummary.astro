@@ -1,0 +1,32 @@
+---
+import type { PractitionerProfile } from '@digiclin/shared';
+
+interface Props {
+  profile: Pick<PractitionerProfile, 'specialties' | 'qualifications'>;
+}
+
+const { profile } = Astro.props;
+---
+
+<dl class="grid gap-3 text-sm">
+  <div>
+    <dt class="text-muted-foreground">Especialidades</dt>
+    <dd class="font-medium">{profile.specialties.join(', ')}</dd>
+  </div>
+  <div>
+    <dt class="text-muted-foreground">Registros profesionales</dt>
+    <dd>
+      <ul class="mt-1 grid gap-1">
+        {
+          profile.qualifications.map((q) => (
+            <li>
+              <span class="font-medium">{q.type}</span> N.º {q.number}
+              {q.issuer && <span class="text-muted-foreground"> · {q.issuer}</span>}
+              <span class="text-muted-foreground"> · {q.country}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </dd>
+  </div>
+</dl>
