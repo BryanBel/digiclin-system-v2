@@ -1,6 +1,6 @@
 # ADR 0003 — Servidor local en la clínica
 
-- **Estado:** aceptada (el diseño del empaquetado queda para la fase 7)
+- **Estado:** pospuesta por ADR 0005 (SaaS primero). Se retoma para la versión instalable.
 - **Fecha:** 2026-09-29
 
 ## Contexto
