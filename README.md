@@ -47,7 +47,7 @@ but never rejects, so a route that does not check explicitly is simply open.
 
 ## The API
 
-28 endpoints across six modules.
+29 endpoints: 28 across six modules, plus `/api/health`.
 
 | Module | Mounted at | What it covers |
 | ------ | ---------- | -------------- |
