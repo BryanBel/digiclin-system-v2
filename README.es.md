@@ -48,7 +48,7 @@ nunca rechaza, así que una ruta que no verifica explícitamente queda abierta.
 
 ## La API
 
-28 endpoints repartidos en seis módulos.
+29 endpoints: 28 repartidos en seis módulos, más `/api/health`.
 
 | Módulo | Montado en | Qué cubre |
 | ------ | ---------- | --------- |
