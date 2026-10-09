@@ -84,10 +84,69 @@ const sendViaResend = async ({ to, subject, text, html, from }) => {
   const message = buildMessage({ to, subject, text, html, from });
 
   try {
-    await resend.emails.send(message);
+    // El SDK de Resend no lanza cuando la API rechaza el envio (remitente sin verificar,
+    // destinatario no permitido): devuelve { data: null, error }. Antes se ignoraba ese
+    // valor, el envio contaba como exitoso y nunca se probaba el respaldo.
+    const { error } = await resend.emails.send(message);
+    if (error) {
+      console.error('[EMAIL][RESEND_FAIL]', error);
+      return false;
+    }
     return true;
   } catch (error) {
     console.error('[EMAIL][RESEND_FAIL]', error);
+    return false;
+  }
+};
+
+const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
+
+/** "Nombre <correo@x.com>" -> { name, email }; un correo suelto -> { email }. */
+const parseAddress = (value) => {
+  const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value);
+  if (!match) return { email: value.trim() };
+  return match[1] ? { name: match[1], email: match[2] } : { email: match[2] };
+};
+
+/**
+ * Brevo por su API HTTP (puerto 443). El plan gratuito de Render bloquea el SMTP saliente
+ * (puertos 25, 465 y 587) desde el 26-sep-2025, asi que el respaldo por Gmail no sale desde
+ * produccion. Un remitente de un dominio gratuito (gmail.com) no se puede autenticar en
+ * Brevo: lo reemplaza por una direccion @brevosend.com, pero el correo llega.
+ */
+const sendViaBrevo = async ({ to, subject, text, html }) => {
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  if (!apiKey || !senderEmail) return false;
+
+  const message = buildMessage({ to, subject, text, html, from: senderEmail });
+
+  try {
+    const response = await fetch(BREVO_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { email: senderEmail, name: process.env.BREVO_SENDER_NAME || 'DigiClin' },
+        to: message.to.map(parseAddress),
+        subject: message.subject,
+        ...(message.html ? { htmlContent: message.html } : {}),
+        ...(message.text ? { textContent: message.text } : {}),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.error('[EMAIL][BREVO_FAIL]', response.status, detail.slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[EMAIL][BREVO_FAIL]', error);
     return false;
   }
 };
@@ -112,6 +171,11 @@ export const sendEmail = async ({ to, subject, text, html, from }) => {
   const deliveredViaResend = await sendViaResend({ to, subject, text, html, from });
   if (deliveredViaResend) {
     return { provider: 'resend' };
+  }
+
+  const deliveredViaBrevo = await sendViaBrevo({ to, subject, text, html, from });
+  if (deliveredViaBrevo) {
+    return { provider: 'brevo' };
   }
 
   const deliveredViaNodemailer = await sendViaNodemailer({ to, subject, text, html, from });
